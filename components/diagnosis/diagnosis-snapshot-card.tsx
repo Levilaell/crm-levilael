@@ -7,8 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Brain, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { DiagnosisRender } from '@/components/lead/diagnosis-render';
+import {
+  TypedDiagnosisAIView,
+  TypedDiagnosisAnswersView,
+} from '@/components/diagnosis/typed-diagnosis-view';
+import { formatPhoneBRDisplay } from '@/lib/phone';
 import type { DiagnosisSnapshot } from '@/types/crm';
+import type { DiagnosisAIAnalysis, DiagnosisAnswers } from '@/types/diagnosis';
 
 interface Props {
   snapshot: DiagnosisSnapshot;
@@ -16,15 +21,20 @@ interface Props {
 }
 
 /**
- * Card "Diagnóstico prévio" — usado em duas situações:
+ * Card "Diagnóstico prévio" — usado em:
  * 1. Tab Overview do lead quando matched_diagnosis_id existe
  * 2. Modal de preview na página /diagnoses
+ * 3. /leads/new?from_diagnosis=ID
  *
- * v1 usa o render genérico DiagnosisRender. Seção 3 substituirá pelo
- * componente tipado com base no schema real do site.
+ * Renderiza por seção (resumo, gargalo, alerta, oportunidades, plano 30/60/90)
+ * usando os tipos derivados de samples/diagnosis_real.json. Respostas do form
+ * vão em dl com labels PT-BR.
  */
 export function DiagnosisSnapshotCard({ snapshot, variant = 'lead-overview' }: Props) {
   const [expanded, setExpanded] = useState(variant === 'modal');
+  const ai = snapshot.ai_analysis as DiagnosisAIAnalysis | null;
+  const answers = snapshot.answers as unknown as DiagnosisAnswers;
+  const phoneDisplay = snapshot.phone ? formatPhoneBRDisplay(snapshot.phone) : null;
 
   return (
     <Card>
@@ -47,19 +57,19 @@ export function DiagnosisSnapshotCard({ snapshot, variant = 'lead-overview' }: P
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
         <div className="text-xs text-muted-foreground">
           {format(new Date(snapshot.completed_at), "d 'de' MMM, yyyy 'às' HH:mm", { locale: ptBR })}
           {snapshot.email ? ` · ${snapshot.email}` : ''}
-          {snapshot.phone ? ` · ${snapshot.phone}` : ''}
+          {phoneDisplay ? ` · ${phoneDisplay}` : ''}
         </div>
 
-        {snapshot.ai_analysis ? (
-          <div className="rounded-md border bg-violet-950/20 border-violet-900/40 p-3 space-y-1.5">
-            <div className="text-xs uppercase tracking-wider text-violet-300 font-medium">
+        {ai ? (
+          <div className="rounded-md border bg-violet-950/15 border-violet-900/40 p-3">
+            <div className="text-xs uppercase tracking-wider text-violet-300 font-medium mb-3">
               Análise IA
             </div>
-            <DiagnosisRender answers={snapshot.ai_analysis as Record<string, unknown>} />
+            <TypedDiagnosisAIView analysis={ai} />
           </div>
         ) : null}
 
@@ -75,7 +85,7 @@ export function DiagnosisSnapshotCard({ snapshot, variant = 'lead-overview' }: P
           </Button>
           {expanded ? (
             <div className="rounded-md border bg-muted/30 p-3">
-              <DiagnosisRender answers={snapshot.answers} />
+              <TypedDiagnosisAnswersView answers={answers} />
             </div>
           ) : null}
         </div>
