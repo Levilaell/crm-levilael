@@ -121,6 +121,43 @@ interface NotifySlaArgs {
   minutesSinceContact: number;
 }
 
+interface NotifyHealthArgs {
+  failures: Array<{ service: string; detail?: string }>;
+}
+
+/**
+ * Notifica APENAS admins quando health check do cron diário detecta falha.
+ * Operadores não recebem (evita ruído pra quem não pode resolver).
+ */
+export async function notifyHealthFailures(args: NotifyHealthArgs): Promise<number> {
+  if (args.failures.length === 0) return 0;
+  const admin = createServiceRoleClient();
+  const { data: users } = await admin
+    .from('crm_users')
+    .select('telegram_chat_id')
+    .eq('role', 'admin')
+    .eq('receives_sla_alerts', true); // reusa o mesmo toggle de alertas críticos
+  if (!users?.length) return 0;
+
+  const lines: string[] = ['⚠️ <b>Health check falhou</b>'];
+  for (const f of args.failures) {
+    const detail = f.detail ? ` — ${escapeHtml(truncate(f.detail, 80))}` : '';
+    lines.push(`• ${escapeHtml(f.service)}${detail}`);
+  }
+  const text = lines.join('\n');
+
+  let sent = 0;
+  await Promise.all(
+    users.map(async (u) => {
+      const chatId = (u as { telegram_chat_id: string | null }).telegram_chat_id;
+      if (!chatId) return;
+      const res = await sendTelegram(chatId, text, { parse_mode: 'HTML' });
+      if (res.ok) sent++;
+    }),
+  );
+  return sent;
+}
+
 export async function notifySlaBreach(args: NotifySlaArgs): Promise<number> {
   const admin = createServiceRoleClient();
   const { data: users } = await admin
