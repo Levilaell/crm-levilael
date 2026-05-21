@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
   open: 'border-zinc-500/40 text-zinc-300',
-  doing: 'border-blue-500/50 text-blue-300',
+  doing: 'border-blue-300 text-blue-700 dark:border-blue-500/50 dark:text-blue-300',
   done: 'border-emerald-500/50 text-emerald-300',
   blocked: 'border-red-500/50 text-red-300',
 };
@@ -94,7 +94,7 @@ export function TaskList({ tasks, usersById }: Props) {
                 </Badge>
                 {task.assignee_id ? <span>→ {usersById[task.assignee_id] ?? '?'}</span> : null}
                 {task.due_at ? (
-                  <span className={overdue ? 'text-red-400' : ''}>
+                  <span className={overdue ? 'text-red-600 dark:text-red-400 font-medium' : ''}>
                     📅 {format(new Date(task.due_at), "dd/MM HH:mm", { locale: ptBR })}
                   </span>
                 ) : null}

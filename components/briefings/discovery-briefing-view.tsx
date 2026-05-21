@@ -18,15 +18,15 @@ interface ViewProps {
 }
 
 const POSITION_COLORS = {
-  aliado: 'border-emerald-500/50 bg-emerald-500/5 text-emerald-300',
-  cetico: 'border-red-500/50 bg-red-500/5 text-red-300',
-  neutro: 'border-zinc-500/30 bg-zinc-500/5 text-zinc-300',
+  aliado: 'border-emerald-200 bg-emerald-50/60 text-emerald-700 dark:border-emerald-500/50 dark:bg-emerald-500/5 dark:text-emerald-300',
+  cetico: 'border-red-200 bg-red-50/60 text-red-700 dark:border-red-500/50 dark:bg-red-500/5 dark:text-red-300',
+  neutro: 'border-border bg-muted/40 text-muted-foreground',
 } as const;
 
 const PRIORITY_COLORS = {
-  alta: 'border-red-500/40 bg-red-500/5',
-  media: 'border-amber-500/40 bg-amber-500/5',
-  baixa: 'border-zinc-500/30 bg-zinc-500/5',
+  alta: 'border-red-200 bg-red-50/40 dark:border-red-500/40 dark:bg-red-500/5',
+  media: 'border-amber-200 bg-amber-50/40 dark:border-amber-500/40 dark:bg-amber-500/5',
+  baixa: 'border-border bg-muted/30',
 } as const;
 
 export function DiscoveryBriefingView({ briefing: b }: ViewProps) {
@@ -50,7 +50,7 @@ export function DiscoveryBriefingView({ briefing: b }: ViewProps) {
             <div key={i} className="rounded-md border p-3 space-y-1">
               <div className="text-xs text-muted-foreground">P: {c.pergunta}</div>
               <div className="text-sm font-medium">R: {c.resposta}</div>
-              <div className="text-xs text-blue-300">→ {c.impacto_proposta}</div>
+              <div className="text-xs text-blue-700 dark:text-blue-300">→ {c.impacto_proposta}</div>
             </div>
           ))}
         </div>
@@ -85,7 +85,7 @@ export function DiscoveryBriefingView({ briefing: b }: ViewProps) {
                   <div className="font-semibold">{o.titulo}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-emerald-400 font-semibold text-sm">
+                  <div className="text-foreground font-semibold text-sm">
                     {fmt.format(o.ticket_min)} – {fmt.format(o.ticket_max)}
                   </div>
                   <div className="text-xs text-muted-foreground">
@@ -110,8 +110,8 @@ export function DiscoveryBriefingView({ briefing: b }: ViewProps) {
         <ul className="space-y-1 text-sm">
           {b.riscos_proposta.map((r, i) => (
             <li key={i} className="flex gap-2">
-              <span className="text-red-400">•</span>
-              {r}
+              <span className="text-red-500 dark:text-red-400 shrink-0">•</span>
+              <span>{r}</span>
             </li>
           ))}
         </ul>

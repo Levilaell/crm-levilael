@@ -54,9 +54,9 @@ export function HealthStatus() {
           >
             <div className="flex items-center gap-2">
               {r.ok ? (
-                <Check className="size-4 text-emerald-400" />
+                <Check className="size-4 text-emerald-600 dark:text-emerald-400" />
               ) : (
-                <X className="size-4 text-red-400" />
+                <X className="size-4 text-red-600 dark:text-red-400" />
               )}
               <span className="text-sm capitalize">{r.service}</span>
             </div>

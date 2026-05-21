@@ -39,34 +39,38 @@ export function DiagnosisSnapshotCard({ snapshot, variant = 'lead-overview' }: P
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Brain className="size-4 text-violet-400" />
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="size-7 rounded-md bg-brand/15 grid place-items-center">
+              <Brain className="size-4 text-brand" />
+            </div>
             <CardTitle>Diagnóstico prévio</CardTitle>
             {variant === 'lead-overview' ? (
-              <Badge variant="outline" className="text-[10px]">
-                veio do funil de diagnóstico
+              <Badge variant="outline" className="text-[10px] border-brand/40 text-foreground/80">
+                veio do funil
               </Badge>
             ) : null}
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-emerald-400 tabular-nums">
+          <div className="text-right shrink-0">
+            <div className="text-3xl font-bold text-foreground tabular-nums leading-none">
               {snapshot.score}
             </div>
-            <div className="text-[10px] text-muted-foreground">score</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
+              score
+            </div>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground border-b pb-3">
           {format(new Date(snapshot.completed_at), "d 'de' MMM, yyyy 'às' HH:mm", { locale: ptBR })}
           {snapshot.email ? ` · ${snapshot.email}` : ''}
           {phoneDisplay ? ` · ${phoneDisplay}` : ''}
         </div>
 
         {ai ? (
-          <div className="rounded-md border bg-violet-950/15 border-violet-900/40 p-3">
-            <div className="text-xs uppercase tracking-wider text-violet-300 font-medium mb-3">
+          <div className="rounded-xl border border-brand/20 bg-brand/[0.03] p-3">
+            <div className="text-[10px] uppercase tracking-wider text-brand font-semibold mb-3">
               Análise IA
             </div>
             <TypedDiagnosisAIView analysis={ai} />
@@ -84,7 +88,7 @@ export function DiagnosisSnapshotCard({ snapshot, variant = 'lead-overview' }: P
             {expanded ? 'Recolher respostas' : 'Ver respostas do diagnóstico'}
           </Button>
           {expanded ? (
-            <div className="rounded-md border bg-muted/30 p-3">
+            <div className="rounded-xl border bg-muted/30 p-3">
               <TypedDiagnosisAnswersView answers={answers} />
             </div>
           ) : null}

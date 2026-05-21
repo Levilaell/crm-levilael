@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Clock } from 'lucide-react';
+import { Building2, Clock, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QUALIFICATION_COLORS, SOURCE_LABELS } from '@/types/crm';
 import type { LeadRow } from '@/lib/leads';
@@ -49,22 +49,22 @@ export function KanbanCard({ lead, ownerName }: KanbanCardProps) {
       {...attributes}
       {...listeners}
       className={cn(
-        'group rounded-md border bg-card p-3 cursor-grab active:cursor-grabbing',
-        'hover:border-ring/50 transition-colors',
+        'group rounded-xl border border-border/70 bg-card p-3 cursor-grab active:cursor-grabbing shadow-xs',
+        'hover:border-ring/50 hover:shadow-sm transition-all',
       )}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
           <Link
             href={`/lead/${lead.id}/overview`}
-            className="font-medium text-sm hover:underline line-clamp-1"
+            className="font-medium text-sm hover:underline line-clamp-1 leading-tight"
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
           >
             {lead.name}
           </Link>
           {lead.company_name ? (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 line-clamp-1">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 line-clamp-1">
               <Building2 className="size-3 shrink-0" />
               {lead.company_name}
             </div>
@@ -73,25 +73,36 @@ export function KanbanCard({ lead, ownerName }: KanbanCardProps) {
         {lead.qualification ? (
           <Badge
             variant="outline"
-            className={cn('text-[10px] px-1.5 py-0', QUALIFICATION_COLORS[lead.qualification])}
+            className={cn('text-[10px] px-1.5 py-0 font-semibold tabular-nums', QUALIFICATION_COLORS[lead.qualification])}
           >
             {lead.qualification}
           </Badge>
         ) : null}
       </div>
 
-      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+      {ticket ? (
+        <div className="text-xs text-foreground font-semibold tabular-nums mb-2">
+          {ticket}
+        </div>
+      ) : null}
+
+      <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground border-t border-border/40 pt-2">
         <span className="flex items-center gap-1">
           <Clock className="size-3" />
           {formatDistanceToNow(new Date(lastActivity), { locale: ptBR, addSuffix: false })}
         </span>
-        <span className="opacity-70">{SOURCE_LABELS[lead.source]}</span>
+        <div className="flex items-center gap-1.5">
+          {lead.matched_diagnosis_id ? (
+            <span className="text-brand" title="Tem diagnóstico prévio">
+              <Brain className="size-3" />
+            </span>
+          ) : null}
+          <span>{SOURCE_LABELS[lead.source]}</span>
+        </div>
       </div>
 
-      {ticket ? <div className="text-[11px] text-emerald-400 mt-1.5 font-medium">{ticket}</div> : null}
-
       {ownerName ? (
-        <div className="text-[10px] text-muted-foreground mt-1.5 truncate">→ {ownerName}</div>
+        <div className="text-[10px] text-muted-foreground mt-1.5 truncate">{ownerName}</div>
       ) : null}
     </div>
   );

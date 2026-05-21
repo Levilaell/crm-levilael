@@ -39,11 +39,11 @@ const STATUS_LABELS: Record<ProposalStatus, string> = {
 };
 
 const STATUS_COLORS: Record<ProposalStatus, string> = {
-  draft: 'border-zinc-500/40',
-  sent: 'border-blue-500/50 text-blue-300',
-  accepted: 'border-emerald-500/50 text-emerald-300',
-  rejected: 'border-red-500/50 text-red-300',
-  revised: 'border-amber-500/50 text-amber-300',
+  draft: 'border-border text-muted-foreground',
+  sent: 'border-blue-300 text-blue-700 bg-blue-50/50 dark:border-blue-500/50 dark:text-blue-300 dark:bg-transparent',
+  accepted: 'border-emerald-300 text-emerald-700 bg-emerald-50/60 dark:border-emerald-500/50 dark:text-emerald-300 dark:bg-transparent',
+  rejected: 'border-red-300 text-red-700 bg-red-50/60 dark:border-red-500/50 dark:text-red-300 dark:bg-transparent',
+  revised: 'border-amber-300 text-amber-700 bg-amber-50/60 dark:border-amber-500/50 dark:text-amber-300 dark:bg-transparent',
 };
 
 export function ProposalCard({ leadId, proposal, hasDiscoveryBriefing }: Props) {
@@ -147,7 +147,7 @@ export function ProposalCard({ leadId, proposal, hasDiscoveryBriefing }: Props) 
           <Badge variant="outline" className={STATUS_COLORS[proposal.status]}>
             {STATUS_LABELS[proposal.status]}
           </Badge>
-          <span className="text-sm font-semibold text-emerald-400">
+          <span className="text-sm font-semibold text-foreground">
             Total: {fmt.format(proposal.total_value_min ?? 0)} – {fmt.format(proposal.total_value_max ?? 0)}
           </span>
         </div>
@@ -190,7 +190,7 @@ export function ProposalCard({ leadId, proposal, hasDiscoveryBriefing }: Props) 
                 <div className="text-xs text-muted-foreground mt-0.5">Resolve: {w.dor_resolvida}</div>
               </TableCell>
               <TableCell className="text-xs max-w-md">{w.escopo}</TableCell>
-              <TableCell className="text-right text-emerald-400 font-medium tabular-nums whitespace-nowrap">
+              <TableCell className="text-right text-foreground font-medium tabular-nums whitespace-nowrap">
                 {fmt.format(w.ticket_min)} – {fmt.format(w.ticket_max)}
               </TableCell>
               <TableCell className="text-right text-xs tabular-nums whitespace-nowrap">

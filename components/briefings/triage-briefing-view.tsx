@@ -21,9 +21,15 @@ interface BriefingViewProps {
 }
 
 const SEVERITY_COLORS = {
-  alta: 'border-red-500/40 bg-red-500/5 text-red-300',
-  media: 'border-amber-500/40 bg-amber-500/5 text-amber-300',
-  baixa: 'border-zinc-500/30 bg-zinc-500/5 text-zinc-300',
+  alta: 'border-red-200 bg-red-50/50 dark:border-red-500/40 dark:bg-red-500/5',
+  media: 'border-amber-200 bg-amber-50/50 dark:border-amber-500/40 dark:bg-amber-500/5',
+  baixa: 'border-border bg-muted/30',
+} as const;
+
+const SEVERITY_BADGE_COLORS = {
+  alta: 'border-red-300 text-red-700 dark:border-red-500/50 dark:text-red-300',
+  media: 'border-amber-300 text-amber-700 dark:border-amber-500/50 dark:text-amber-300',
+  baixa: 'border-border text-muted-foreground',
 } as const;
 
 export function TriageBriefingView({ briefing: b }: BriefingViewProps) {
@@ -41,24 +47,24 @@ export function TriageBriefingView({ briefing: b }: BriefingViewProps) {
       </Section>
 
       {/* Qualificação + Ticket */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="rounded-md border p-3">
-          <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="rounded-xl border bg-card p-4">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
             Qualificação
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={cn('text-base px-2', QUALIFICATION_COLORS[b.qualificacao.nivel])}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="outline" className={cn('text-sm px-2 py-0.5 font-semibold', QUALIFICATION_COLORS[b.qualificacao.nivel])}>
               {b.qualificacao.nivel}
             </Badge>
-            <span className="text-sm">{b.qualificacao.motivo}</span>
+            <span className="text-sm text-muted-foreground">{b.qualificacao.motivo}</span>
           </div>
         </div>
-        <div className="rounded-md border p-3">
-          <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">
+        <div className="rounded-xl border bg-card p-4">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
             Ticket estimado
           </div>
-          <div className="flex items-center gap-2 text-emerald-400 font-semibold">
-            <BadgeDollarSign className="size-4" />
+          <div className="flex items-center gap-2 text-foreground font-semibold tabular-nums">
+            <BadgeDollarSign className="size-4 text-brand" />
             {formatter.format(b.ticket_estimado.min)} – {formatter.format(b.ticket_estimado.max)}
           </div>
         </div>
@@ -104,12 +110,12 @@ export function TriageBriefingView({ briefing: b }: BriefingViewProps) {
           {b.dores_mapeadas.map((dor, i) => (
             <div
               key={i}
-              className={cn('rounded-md border p-3', SEVERITY_COLORS[dor.severidade])}
+              className={cn('rounded-xl border p-3', SEVERITY_COLORS[dor.severidade])}
             >
-              <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
                 <div className="font-medium text-sm">{dor.titulo}</div>
                 <div className="flex items-center gap-1">
-                  <Badge variant="outline" className="text-[10px]">
+                  <Badge variant="outline" className={cn('text-[10px]', SEVERITY_BADGE_COLORS[dor.severidade])}>
                     {dor.severidade}
                   </Badge>
                   {dor.onda_relacionada ? (
@@ -119,7 +125,7 @@ export function TriageBriefingView({ briefing: b }: BriefingViewProps) {
                   ) : null}
                 </div>
               </div>
-              <p className="text-xs leading-relaxed">{dor.descricao}</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">{dor.descricao}</p>
             </div>
           ))}
           {b.dores_mapeadas.length === 0 ? (
@@ -132,9 +138,9 @@ export function TriageBriefingView({ briefing: b }: BriefingViewProps) {
       <Section icon={TrendingUp} title={`Sinais (${b.sinais.length})`}>
         <div className="flex flex-wrap gap-2">
           {b.sinais.map((s, i) => (
-            <Badge key={i} variant="outline" className="font-normal">
-              <span className="text-amber-400 mr-1">{s.tipo}:</span>
-              {s.descricao}
+            <Badge key={i} variant="outline" className="font-normal max-w-full">
+              <span className="text-brand mr-1 font-medium">{s.tipo}:</span>
+              <span className="text-foreground/80 truncate">{s.descricao}</span>
             </Badge>
           ))}
         </div>
@@ -157,8 +163,8 @@ export function TriageBriefingView({ briefing: b }: BriefingViewProps) {
         <ul className="space-y-1 text-sm">
           {b.riscos.map((r, i) => (
             <li key={i} className="flex gap-2">
-              <span className="text-red-400">•</span>
-              {r}
+              <span className="text-red-500 dark:text-red-400 shrink-0">•</span>
+              <span>{r}</span>
             </li>
           ))}
           {b.riscos.length === 0 ? <li className="text-muted-foreground">Nenhum.</li> : null}

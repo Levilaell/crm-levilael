@@ -37,14 +37,15 @@ export default async function PipelinePage({ searchParams }: PageProps) {
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pipeline</h1>
+      <div className="flex items-end justify-between gap-2 flex-wrap">
+        <div className="space-y-1">
+          <h1 className="heading-2">Pipeline</h1>
           <p className="text-sm text-muted-foreground">
-            {leads.length} {leads.length === 1 ? 'lead' : 'leads'}
+            {leads.length} {leads.length === 1 ? 'lead' : 'leads'} no funil
           </p>
         </div>
         <Button
+          variant="brand"
           render={
             <Link href="/leads/new">
               <Plus className="size-4" />

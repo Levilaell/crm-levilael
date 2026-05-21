@@ -20,7 +20,7 @@ export default function GlobalError({
     <div className="min-h-screen grid place-items-center p-4">
       <Card className="max-w-md w-full">
         <CardHeader>
-          <div className="flex items-center gap-2 text-red-400">
+          <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
             <AlertTriangle className="size-5" />
             <CardTitle>Algo quebrou</CardTitle>
           </div>

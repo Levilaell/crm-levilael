@@ -41,13 +41,13 @@ export function AppTopbar({
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border/60 bg-background/80 px-4 backdrop-blur-md">
       <SidebarTrigger />
       <Separator orientation="vertical" className="h-4" />
       <div className="flex-1" />
       <Button
         variant="ghost"
-        size="icon"
+        size="icon-sm"
         aria-label="Alternar tema"
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       >
@@ -56,16 +56,23 @@ export function AppTopbar({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menu">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-full size-8 p-0"
+              aria-label="Menu"
+            >
               <Avatar className="size-8">
-                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                <AvatarFallback className="text-[11px] bg-brand text-brand-foreground font-medium">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
             </Button>
           }
         />
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-0.5">
               <span className="text-sm font-medium">{displayName}</span>
               <span className="text-xs text-muted-foreground">{email}</span>
             </div>

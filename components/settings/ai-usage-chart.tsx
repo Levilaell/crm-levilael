@@ -24,33 +24,36 @@ export function AIUsageChart({ data }: Props) {
     <div className="h-[240px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={formatted} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" vertical={false} />
           <XAxis
             dataKey="day"
-            tick={{ fontSize: 10, fill: '#a1a1aa' }}
+            tick={{ fontSize: 10 }}
+            className="text-muted-foreground fill-current"
             tickLine={false}
-            axisLine={{ stroke: '#3f3f46' }}
+            axisLine={false}
             interval="preserveStartEnd"
           />
           <YAxis
-            tick={{ fontSize: 10, fill: '#a1a1aa' }}
+            tick={{ fontSize: 10 }}
+            className="text-muted-foreground fill-current"
             tickLine={false}
-            axisLine={{ stroke: '#3f3f46' }}
+            axisLine={false}
             tickFormatter={(v: number) => `R$${v.toFixed(0)}`}
             width={50}
           />
           <Tooltip
-            cursor={{ fill: 'rgba(167,139,250,0.1)' }}
+            cursor={{ fill: 'rgba(212,162,62,0.1)' }}
             contentStyle={{
-              backgroundColor: '#18181b',
-              border: '1px solid #3f3f46',
-              borderRadius: 6,
+              backgroundColor: 'var(--color-popover)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 8,
               fontSize: 12,
+              color: 'var(--color-foreground)',
             }}
-            labelStyle={{ color: '#fafafa' }}
+            labelStyle={{ color: 'var(--color-foreground)' }}
             formatter={(v) => [`R$ ${Number(v).toFixed(2)}`, 'Custo']}
           />
-          <Bar dataKey="cost" fill="#a78bfa" radius={[2, 2, 0, 0]} />
+          <Bar dataKey="cost" fill="var(--color-brand)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -27,13 +27,14 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <div className="size-7 rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-xs font-bold text-white">
+        <div className="flex items-center gap-2.5 px-2 py-1.5">
+          <div className="size-8 rounded-lg bg-brand grid place-items-center text-sm font-bold text-brand-foreground shadow-sm shrink-0">
             LL
           </div>
-          <span className="font-semibold text-sm group-data-[collapsible=icon]:hidden">
-            Levi Lael
-          </span>
+          <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
+            <span className="font-semibold text-sm tracking-tight">Levi Lael</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">CRM</span>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>

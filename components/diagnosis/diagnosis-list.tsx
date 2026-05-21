@@ -104,8 +104,8 @@ export function DiagnosisList({ snapshots }: Props) {
 }
 
 function scoreColor(score: number): string {
-  if (score >= 80) return 'border-emerald-500/50 text-emerald-300';
-  if (score >= 60) return 'border-blue-500/50 text-blue-300';
-  if (score >= 40) return 'border-amber-500/50 text-amber-300';
-  return 'border-zinc-500/40 text-zinc-300';
+  if (score >= 80) return 'border-emerald-300 text-emerald-700 bg-emerald-50/60 dark:border-emerald-500/50 dark:text-emerald-300 dark:bg-transparent';
+  if (score >= 60) return 'border-blue-300 text-blue-700 bg-blue-50/60 dark:border-blue-500/50 dark:text-blue-300 dark:bg-transparent';
+  if (score >= 40) return 'border-amber-300 text-amber-700 bg-amber-50/60 dark:border-amber-500/50 dark:text-amber-300 dark:bg-transparent';
+  return 'border-border text-muted-foreground';
 }

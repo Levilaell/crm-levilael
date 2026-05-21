@@ -24,9 +24,9 @@ interface AIProps {
 }
 
 const COMPLEXITY_COLORS = {
-  baixa: 'border-emerald-500/50 text-emerald-300',
-  media: 'border-amber-500/50 text-amber-300',
-  alta: 'border-red-500/50 text-red-300',
+  baixa: 'border-emerald-300 text-emerald-700 dark:border-emerald-500/50 dark:text-emerald-300',
+  media: 'border-amber-300 text-amber-700 dark:border-amber-500/50 dark:text-amber-300',
+  alta: 'border-red-300 text-red-700 dark:border-red-500/50 dark:text-red-300',
 } as const;
 
 export function TypedDiagnosisAIView({ analysis: a }: AIProps) {
@@ -40,10 +40,10 @@ export function TypedDiagnosisAIView({ analysis: a }: AIProps) {
 
       {a.gargalo_principal ? (
         <Section icon={Target} title="Gargalo principal">
-          <div className="rounded-md border bg-red-950/20 border-red-900/40 p-3 space-y-1.5">
-            <div className="flex items-center justify-between">
+          <div className="rounded-xl border border-red-200 bg-red-50/40 dark:border-red-900/40 dark:bg-red-950/20 p-3 space-y-1.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-sm font-medium">{a.gargalo_principal.area}</span>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-[10px] border-red-300 text-red-700 dark:border-red-500/50 dark:text-red-300">
                 impacto {a.gargalo_principal.impacto_estimado}
               </Badge>
             </div>
@@ -56,7 +56,7 @@ export function TypedDiagnosisAIView({ analysis: a }: AIProps) {
 
       {a.alerta_estrategico ? (
         <Section icon={AlertTriangle} title="Alerta estratégico">
-          <div className="rounded-md border bg-amber-950/20 border-amber-900/40 p-3">
+          <div className="rounded-xl border border-amber-200 bg-amber-50/40 dark:border-amber-900/40 dark:bg-amber-950/20 p-3">
             <p className="text-sm leading-relaxed">{a.alerta_estrategico}</p>
           </div>
         </Section>
@@ -66,8 +66,8 @@ export function TypedDiagnosisAIView({ analysis: a }: AIProps) {
         <Section icon={Lightbulb} title={`Oportunidades (${a.tres_oportunidades.length})`}>
           <div className="space-y-2">
             {a.tres_oportunidades.map((op: DiagnosisOpportunity, i) => (
-              <div key={i} className="rounded-md border p-3">
-                <div className="flex items-start justify-between gap-2 mb-1">
+              <div key={i} className="rounded-xl border bg-card p-3">
+                <div className="flex items-start justify-between gap-2 mb-1.5">
                   <div className="font-medium text-sm">{op.titulo}</div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Badge variant="outline" className={cn('text-[10px]', COMPLEXITY_COLORS[op.complexidade] ?? '')}>
@@ -78,8 +78,8 @@ export function TypedDiagnosisAIView({ analysis: a }: AIProps) {
                     </Badge>
                   </div>
                 </div>
-                <p className="text-xs leading-relaxed text-muted-foreground mb-1.5">{op.descricao}</p>
-                <div className="text-[11px] text-emerald-400">
+                <p className="text-xs leading-relaxed text-muted-foreground mb-2">{op.descricao}</p>
+                <div className="text-[11px] text-foreground/80 font-medium">
                   → {op.impacto_estimado}
                 </div>
               </div>
@@ -100,7 +100,7 @@ export function TypedDiagnosisAIView({ analysis: a }: AIProps) {
 
       {a.proximo_passo_recomendado ? (
         <Section icon={Layers3} title="Próximo passo recomendado">
-          <div className="rounded-md border bg-violet-950/20 border-violet-900/40 p-3 space-y-1">
+          <div className="rounded-xl border border-brand/30 bg-brand/5 p-3 space-y-1">
             <div className="text-sm font-medium capitalize">{a.proximo_passo_recomendado.abordagem}</div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {a.proximo_passo_recomendado.justificativa}

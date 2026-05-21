@@ -58,7 +58,7 @@ export default async function AIUsagePage() {
             <CardTitle>Custo do mês</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold text-emerald-400 tabular-nums">
+            <div className="text-4xl font-bold text-foreground tabular-nums">
               {fmt.format(summary.totalCostBrlMonth)}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
@@ -99,12 +99,12 @@ export default async function AIUsagePage() {
                     <TableRow key={op}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Sparkles className="size-3 text-violet-400" />
+                          <Sparkles className="size-3 text-brand" />
                           {OPERATION_LABELS[op] ?? op}
                         </div>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{v.count}</TableCell>
-                      <TableCell className="text-right tabular-nums text-emerald-400">
+                      <TableCell className="text-right tabular-nums text-foreground">
                         {fmt.format(v.cost)}
                       </TableCell>
                     </TableRow>
@@ -143,7 +143,7 @@ export default async function AIUsagePage() {
                         </Link>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{l.count}</TableCell>
-                      <TableCell className="text-right tabular-nums text-emerald-400">
+                      <TableCell className="text-right tabular-nums text-foreground">
                         {fmt.format(l.cost)}
                       </TableCell>
                     </TableRow>

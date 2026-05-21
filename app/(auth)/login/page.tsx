@@ -5,10 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createClient } from '@/lib/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowRight, MailCheck } from 'lucide-react';
 
 export default function LoginPage() {
   return (
@@ -41,7 +40,6 @@ function LoginPageInner() {
         email,
         options: {
           emailRedirectTo: `${redirectBase}/auth/callback?next=${encodeURIComponent(next)}`,
-          // Whitelisting é em crm_users (checado no layout autenticado), não em auth.users.
           shouldCreateUser: true,
         },
       });
@@ -55,33 +53,56 @@ function LoginPageInner() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>CRM Levi Lael</CardTitle>
-          <CardDescription>
-            Entrar com magic link. Só emails autorizados têm acesso.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {denied && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>
+    <div className="min-h-screen flex flex-col bg-background">
+      <main className="flex-1 grid place-items-center px-6 py-12">
+        <div className="w-full max-w-sm space-y-8">
+          <div className="space-y-3 text-center">
+            <div className="mx-auto size-12 rounded-xl bg-brand grid place-items-center text-brand-foreground font-bold shadow-sm">
+              LL
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight">CRM Levi Lael</h1>
+              <p className="text-sm text-muted-foreground">
+                Entrar com magic link no email
+              </p>
+            </div>
+          </div>
+
+          {denied ? (
+            <Alert variant="destructive">
+              <AlertDescription className="text-xs">
                 {deniedEmail
-                  ? `${deniedEmail} não está autorizado. Fale com o admin.`
+                  ? `${deniedEmail} não está autorizado. Só os 2 emails cadastrados em crm_users entram.`
                   : 'Email não autorizado.'}
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
+
           {sent ? (
-            <div className="text-sm text-muted-foreground">
-              Link enviado pra <span className="font-medium text-foreground">{email}</span>. Cheque
-              o email e clique pra entrar.
+            <div className="rounded-xl border bg-card p-6 text-center space-y-3">
+              <MailCheck className="size-8 text-brand mx-auto" />
+              <div className="space-y-1">
+                <p className="font-medium text-sm">Link enviado</p>
+                <p className="text-xs text-muted-foreground">
+                  Cheque a caixa de <span className="font-medium text-foreground">{email}</span> e
+                  clique no link pra entrar. Pode levar até 30s.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSent(false);
+                  setEmail('');
+                }}
+              >
+                Tentar outro email
+              </Button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -90,20 +111,38 @@ function LoginPageInner() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoFocus
+                  className="h-11"
                 />
               </div>
-              {error && (
+              {error ? (
                 <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="text-xs">{error}</AlertDescription>
                 </Alert>
-              )}
-              <Button type="submit" className="w-full" disabled={loading || !email}>
-                {loading ? <Loader2 className="size-4 animate-spin" /> : 'Receber link'}
+              ) : null}
+              <Button
+                type="submit"
+                variant="brand"
+                size="lg"
+                className="w-full"
+                disabled={loading || !email}
+              >
+                {loading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <>
+                    Receber link
+                    <ArrowRight className="size-4" />
+                  </>
+                )}
               </Button>
             </form>
           )}
-        </CardContent>
-      </Card>
+
+          <p className="text-[11px] text-muted-foreground text-center">
+            Operação interna · Levi Lael Automação
+          </p>
+        </div>
+      </main>
     </div>
   );
 }
