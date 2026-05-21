@@ -8,9 +8,7 @@ import { TranscriptionUploader } from '@/components/lead/transcription-uploader'
 import { TranscriptionList } from '@/components/lead/transcription-list';
 import { BriefingGenerator } from '@/components/briefings/briefing-generator';
 import { BriefingVersionSelector } from '@/components/briefings/briefing-version-selector';
-import { TriageBriefingView } from '@/components/briefings/triage-briefing-view';
 import { DiagramCanvas } from '@/components/diagrams/diagram-canvas';
-import type { BriefingTriage } from '@/types/crm';
 
 export default async function TriagePage({
   params,
@@ -58,10 +56,7 @@ export default async function TriagePage({
                 Sem briefing ainda. Gere após adicionar a transcrição.
               </p>
             ) : (
-              <BriefingVersionSelector<BriefingTriage>
-                briefings={briefings}
-                Renderer={({ briefing }) => <TriageBriefingView briefing={briefing} />}
-              />
+              <BriefingVersionSelector briefings={briefings} kind="triage" />
             )}
           </CardContent>
         </Card>

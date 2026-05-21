@@ -9,11 +9,9 @@ import { TranscriptionUploader } from '@/components/lead/transcription-uploader'
 import { TranscriptionList } from '@/components/lead/transcription-list';
 import { BriefingGenerator } from '@/components/briefings/briefing-generator';
 import { BriefingVersionSelector } from '@/components/briefings/briefing-version-selector';
-import { DiscoveryBriefingView } from '@/components/briefings/discovery-briefing-view';
 import { DiscoveryScriptCard } from '@/components/lead/discovery-script-card';
 import { SlideDeckCard } from '@/components/lead/slide-deck-card';
 import { DiagramCanvas } from '@/components/diagrams/diagram-canvas';
-import type { BriefingDiscovery } from '@/types/crm';
 
 export default async function DiscoveryPage({
   params,
@@ -94,10 +92,7 @@ export default async function DiscoveryPage({
                 Sem briefing ainda. Precisa de: briefing de triagem + transcrição da descoberta.
               </p>
             ) : (
-              <BriefingVersionSelector<BriefingDiscovery>
-                briefings={briefings}
-                Renderer={({ briefing }) => <DiscoveryBriefingView briefing={briefing} />}
-              />
+              <BriefingVersionSelector briefings={briefings} kind="discovery" />
             )}
           </CardContent>
         </Card>

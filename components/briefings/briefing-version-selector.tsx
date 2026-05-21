@@ -5,16 +5,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { BriefingRow } from '@/lib/briefings';
+import type { BriefingTriage, BriefingDiscovery } from '@/types/crm';
+import { TriageBriefingView } from './triage-briefing-view';
+import { DiscoveryBriefingView } from './discovery-briefing-view';
 
-interface VersionSelectorProps<T> {
+interface VersionSelectorProps {
   briefings: BriefingRow[];
-  Renderer: (props: { briefing: T }) => React.ReactNode;
+  kind: 'triage' | 'discovery';
 }
 
-export function BriefingVersionSelector<T>({
-  briefings,
-  Renderer,
-}: VersionSelectorProps<T>) {
+export function BriefingVersionSelector({ briefings, kind }: VersionSelectorProps) {
   const [selectedId, setSelectedId] = useState(briefings[0]?.id ?? '');
   const current = briefings.find((b) => b.id === selectedId) ?? briefings[0];
 
@@ -40,7 +40,11 @@ export function BriefingVersionSelector<T>({
           {current.ai_model ?? '—'} · {current.prompt_tokens ?? 0}+{current.completion_tokens ?? 0} tk
         </span>
       </div>
-      <Renderer briefing={current.content_json as T} />
+      {kind === 'triage' ? (
+        <TriageBriefingView briefing={current.content_json as unknown as BriefingTriage} />
+      ) : (
+        <DiscoveryBriefingView briefing={current.content_json as unknown as BriefingDiscovery} />
+      )}
     </div>
   );
 }
