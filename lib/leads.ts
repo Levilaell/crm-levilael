@@ -24,6 +24,7 @@ export interface LeadRow {
   last_contact_at: string | null;
   next_action_at: string | null;
   lost_reason: string | null;
+  matched_diagnosis_id: string | null;
 }
 
 export interface LeadFilters {
@@ -34,7 +35,7 @@ export interface LeadFilters {
 }
 
 const SELECT_COLS =
-  'id, name, email, phone, company_name, role_title, source, source_lead_id, stage, qualification, qualification_reason, owner_id, notes, estimated_ticket_min, estimated_ticket_max, diagnosis_score, diagnosis_answers, created_at, updated_at, last_contact_at, next_action_at, lost_reason';
+  'id, name, email, phone, company_name, role_title, source, source_lead_id, stage, qualification, qualification_reason, owner_id, notes, estimated_ticket_min, estimated_ticket_max, diagnosis_score, diagnosis_answers, created_at, updated_at, last_contact_at, next_action_at, lost_reason, matched_diagnosis_id';
 
 export async function listLeads(filters: LeadFilters = {}): Promise<LeadRow[]> {
   const admin = createServiceRoleClient();

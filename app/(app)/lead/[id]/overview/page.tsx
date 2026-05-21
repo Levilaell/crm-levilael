@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 import { getLead } from '@/lib/leads';
+import { getSnapshot } from '@/lib/diagnosis-snapshots';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LeadOverviewForm } from '@/components/lead/lead-overview-form';
-import { DiagnosisRender } from '@/components/lead/diagnosis-render';
+import { DiagnosisSnapshotCard } from '@/components/diagnosis/diagnosis-snapshot-card';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -15,6 +16,10 @@ export default async function LeadOverviewPage({
   const lead = await getLead(id);
   if (!lead) notFound();
 
+  const snapshot = lead.matched_diagnosis_id
+    ? await getSnapshot(lead.matched_diagnosis_id)
+    : null;
+
   const ageDays = Math.floor(
     (Date.now() - new Date(lead.created_at).getTime()) / (1000 * 60 * 60 * 24),
   );
@@ -22,21 +27,14 @@ export default async function LeadOverviewPage({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-2 space-y-4">
+        {snapshot ? <DiagnosisSnapshotCard snapshot={snapshot} /> : null}
+
         <Card>
           <CardHeader>
             <CardTitle>Dados básicos</CardTitle>
           </CardHeader>
           <CardContent>
             <LeadOverviewForm lead={lead} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Diagnóstico do site</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DiagnosisRender answers={lead.diagnosis_answers} />
           </CardContent>
         </Card>
       </div>

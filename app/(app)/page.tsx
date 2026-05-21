@@ -1,7 +1,10 @@
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
 import { listLeads, listCrmUsers } from '@/lib/leads';
 import { requireCrmSession } from '@/lib/auth';
 import { KanbanBoard } from '@/components/kanban/board';
 import { KanbanFilters } from '@/components/kanban/filters';
+import { Button } from '@/components/ui/button';
 import { Suspense } from 'react';
 import type { LeadSource, Qualification } from '@/types/crm';
 import { LEAD_SOURCES, QUALIFICATIONS } from '@/types/crm';
@@ -41,6 +44,14 @@ export default async function PipelinePage({ searchParams }: PageProps) {
             {leads.length} {leads.length === 1 ? 'lead' : 'leads'}
           </p>
         </div>
+        <Button
+          render={
+            <Link href="/leads/new">
+              <Plus className="size-4" />
+              Novo lead
+            </Link>
+          }
+        />
       </div>
       <Suspense>
         <KanbanFilters users={users} />

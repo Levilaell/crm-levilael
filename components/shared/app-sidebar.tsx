@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ListChecks, Settings, KanbanSquare } from 'lucide-react';
+import { ListChecks, Settings, KanbanSquare, Brain } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +18,7 @@ import {
 const items = [
   { href: '/', label: 'Pipeline', icon: KanbanSquare, match: (p: string) => p === '/' || p.startsWith('/lead') },
   { href: '/tasks', label: 'Tarefas', icon: ListChecks, match: (p: string) => p.startsWith('/tasks') },
+  { href: '/diagnoses', label: 'Diagnósticos', icon: Brain, match: (p: string) => p.startsWith('/diagnoses') },
   { href: '/settings', label: 'Configurações', icon: Settings, match: (p: string) => p.startsWith('/settings') },
 ] as const;
 
