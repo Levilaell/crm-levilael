@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireCrmSession } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/service';
-import { generateStructured } from '@/lib/anthropic';
+import { generateStructured, ANTHROPIC_MODEL } from '@/lib/anthropic';
+import { logAIOperation } from '@/lib/ai-log';
 import {
   DISCOVERY_SYSTEM,
   DISCOVERY_TOOL_NAME,
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
   });
 
   let result;
+  const startedAt = Date.now();
   try {
     result = await generateStructured<BriefingDiscovery>({
       system: DISCOVERY_SYSTEM,
@@ -103,12 +105,22 @@ export async function POST(request: Request) {
       maxTokens: 8192,
     });
   } catch (err) {
+    await logAIOperation({
+      leadId: leadRow.id,
+      operation: 'briefing_discovery',
+      provider: 'anthropic',
+      model: ANTHROPIC_MODEL,
+      durationMs: Date.now() - startedAt,
+      success: false,
+      errorMessage: err instanceof Error ? err.message : 'unknown',
+    });
     console.error('[briefing/discovery] generate failed', err);
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : 'generation failed' },
       { status: 500 },
     );
   }
+  const durationMs = Date.now() - startedAt;
 
   const version = await nextBriefingVersion(leadRow.id, 'discovery');
 
@@ -174,6 +186,17 @@ export async function POST(request: Request) {
       prompt_tokens: result.promptTokens,
       completion_tokens: result.completionTokens,
     },
+  });
+
+  await logAIOperation({
+    leadId: leadRow.id,
+    operation: 'briefing_discovery',
+    provider: 'anthropic',
+    model: result.model,
+    promptTokens: result.promptTokens,
+    completionTokens: result.completionTokens,
+    durationMs,
+    success: true,
   });
 
   await notifyBriefingReady({ leadId: leadRow.id, leadName: leadRow.name, kind: 'discovery' });

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireCrmSession } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/service';
-import { generateText } from '@/lib/anthropic';
+import { generateText, ANTHROPIC_MODEL } from '@/lib/anthropic';
+import { logAIOperation } from '@/lib/ai-log';
 import {
   DISCOVERY_SCRIPT_SYSTEM,
   buildDiscoveryScriptUserPrompt,
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
   });
 
   let result;
+  const startedAt = Date.now();
   try {
     result = await generateText({
       system: DISCOVERY_SCRIPT_SYSTEM,
@@ -57,11 +59,21 @@ export async function POST(request: Request) {
       maxTokens: 4096,
     });
   } catch (err) {
+    await logAIOperation({
+      leadId: leadRow.id,
+      operation: 'discovery_script',
+      provider: 'anthropic',
+      model: ANTHROPIC_MODEL,
+      durationMs: Date.now() - startedAt,
+      success: false,
+      errorMessage: err instanceof Error ? err.message : 'unknown',
+    });
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : 'generation failed' },
       { status: 500 },
     );
   }
+  const durationMs = Date.now() - startedAt;
 
   const version = await nextBriefingVersion(leadRow.id, 'discovery_script');
   const { data: inserted, error } = await admin
@@ -94,6 +106,17 @@ export async function POST(request: Request) {
       prompt_tokens: result.promptTokens,
       completion_tokens: result.completionTokens,
     },
+  });
+
+  await logAIOperation({
+    leadId: leadRow.id,
+    operation: 'discovery_script',
+    provider: 'anthropic',
+    model: result.model,
+    promptTokens: result.promptTokens,
+    completionTokens: result.completionTokens,
+    durationMs,
+    success: true,
   });
 
   return NextResponse.json({

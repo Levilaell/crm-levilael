@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireCrmSession } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/service';
-import { transcribeAudio } from '@/lib/openai';
+import { transcribeAudio, TRANSCRIBE_MODEL } from '@/lib/openai';
+import { logAIOperation } from '@/lib/ai-log';
 
 // Whisper API rejeita arquivos > 25MB
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -73,12 +74,22 @@ export async function POST(
   let text: string;
   let durationSeconds: number | null;
   let model: string;
+  const whisperStartedAt = Date.now();
   try {
     const result = await transcribeAudio(file);
     text = result.text;
     durationSeconds = result.durationSeconds;
     model = result.model;
   } catch (err) {
+    await logAIOperation({
+      leadId,
+      operation: 'whisper_transcription',
+      provider: 'openai',
+      model: TRANSCRIBE_MODEL,
+      durationMs: Date.now() - whisperStartedAt,
+      success: false,
+      errorMessage: err instanceof Error ? err.message : 'unknown',
+    });
     console.error('[transcribe] whisper failed', err);
     await admin.storage.from('crm_audio').remove([storagePath]);
     return NextResponse.json(
@@ -86,6 +97,7 @@ export async function POST(
       { status: 500 },
     );
   }
+  const whisperDurationMs = Date.now() - whisperStartedAt;
 
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
 
@@ -109,18 +121,29 @@ export async function POST(
     return NextResponse.json({ ok: false, error: 'insert failed' }, { status: 500 });
   }
 
-  await admin.from('crm_lead_events').insert({
-    lead_id: leadId,
-    actor_id: session.crmUser.id,
-    event_type: 'transcription_added',
-    payload: {
-      transcription_id: (inserted as { id: string }).id,
-      kind,
-      source: 'audio_upload',
-      duration_seconds: durationSeconds,
-      whisper_model: model,
-    },
-  });
+  await Promise.all([
+    admin.from('crm_lead_events').insert({
+      lead_id: leadId,
+      actor_id: session.crmUser.id,
+      event_type: 'transcription_added',
+      payload: {
+        transcription_id: (inserted as { id: string }).id,
+        kind,
+        source: 'audio_upload',
+        duration_seconds: durationSeconds,
+        whisper_model: model,
+      },
+    }),
+    logAIOperation({
+      leadId,
+      operation: 'whisper_transcription',
+      provider: 'openai',
+      model,
+      audioDurationSeconds: durationSeconds ?? null,
+      durationMs: whisperDurationMs,
+      success: true,
+    }),
+  ]);
 
   return NextResponse.json({
     ok: true,

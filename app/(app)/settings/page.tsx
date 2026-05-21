@@ -1,9 +1,12 @@
+import Link from 'next/link';
 import { requireCrmSession } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { ProfileForm } from '@/components/settings/profile-form';
 import { HealthStatus } from '@/components/settings/health-status';
 import { WebhookInfo } from '@/components/settings/webhook-info';
+import { LineChart } from 'lucide-react';
 
 export default async function SettingsPage() {
   const session = await requireCrmSession();
@@ -29,7 +32,18 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4 max-w-4xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
+        <Button
+          variant="outline"
+          render={
+            <Link href="/settings/ai-usage">
+              <LineChart className="size-4" />
+              Uso de IA
+            </Link>
+          }
+        />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>

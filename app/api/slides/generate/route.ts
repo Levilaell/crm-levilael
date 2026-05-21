@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireCrmSession } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/service';
-import { generateText } from '@/lib/anthropic';
+import { generateText, ANTHROPIC_MODEL } from '@/lib/anthropic';
+import { logAIOperation } from '@/lib/ai-log';
 import { SLIDES_SYSTEM, buildSlidesUserPrompt } from '@/lib/prompts/slides';
 import { getLatestBriefing } from '@/lib/briefings';
 
@@ -44,7 +45,9 @@ export async function POST(request: Request) {
     );
   }
 
+  const slidesOperation = parsed.data.kind === 'proposal' ? 'slides_proposal' : 'slides_discovery_prep';
   let result;
+  const startedAt = Date.now();
   try {
     result = await generateText({
       system: SLIDES_SYSTEM,
@@ -57,11 +60,21 @@ export async function POST(request: Request) {
       maxTokens: 8192,
     });
   } catch (err) {
+    await logAIOperation({
+      leadId: leadRow.id,
+      operation: slidesOperation,
+      provider: 'anthropic',
+      model: ANTHROPIC_MODEL,
+      durationMs: Date.now() - startedAt,
+      success: false,
+      errorMessage: err instanceof Error ? err.message : 'unknown',
+    });
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : 'generation failed' },
       { status: 500 },
     );
   }
+  const durationMs = Date.now() - startedAt;
 
   const html = result.text.trim();
 
@@ -96,6 +109,17 @@ export async function POST(request: Request) {
       kind: parsed.data.kind,
       storage_path: path,
     },
+  });
+
+  await logAIOperation({
+    leadId: leadRow.id,
+    operation: slidesOperation,
+    provider: 'anthropic',
+    model: result.model,
+    promptTokens: result.promptTokens,
+    completionTokens: result.completionTokens,
+    durationMs,
+    success: true,
   });
 
   return NextResponse.json({
