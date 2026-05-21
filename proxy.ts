@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 
 // Só refresh de sessão Supabase + redirect pro login se rota privada sem cookie.
 // NÃO consulta crm_users (custo por navegação). Membership valida no layout.
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
 
   const supabase = createServerClient(

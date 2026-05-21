@@ -1,16 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service';
 import { notifySlaBreach } from '@/lib/notifications';
+import { SLA_THRESHOLDS_MIN, SLA_REALERT_COOLDOWN_MIN } from '@/lib/sla';
 import type { Qualification } from '@/types/crm';
-
-// Limites de tempo (minutos) sem contato pra disparar alerta, por qualificação
-const SLA_MINUTES: Record<Qualification, number> = {
-  AAA: 30,
-  AA: 30,
-  A: 240, // 4h
-  B: 1440, // 24h
-  C: 1440,
-};
 
 const ACTIVE_STAGES = [
   'new',
@@ -63,15 +55,14 @@ export async function GET(request: Request) {
     };
     const q = lead.qualification;
     if (!q) continue;
-    const threshold = SLA_MINUTES[q];
+    const threshold = SLA_THRESHOLDS_MIN[q];
     const reference = lead.last_contact_at ?? lead.created_at;
     const ageMin = Math.floor((now - new Date(reference).getTime()) / 60000);
     if (ageMin < threshold) continue;
 
-    // Não spammar: re-alertar só se passou 1 hora desde último alerta
     if (lead.sla_alerted_at) {
       const sinceLastAlert = (now - new Date(lead.sla_alerted_at).getTime()) / 60000;
-      if (sinceLastAlert < 60) continue;
+      if (sinceLastAlert < SLA_REALERT_COOLDOWN_MIN) continue;
     }
 
     await notifySlaBreach({
