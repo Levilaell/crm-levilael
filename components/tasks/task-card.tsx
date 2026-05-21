@@ -5,7 +5,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Building2, GripVertical } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -52,21 +52,28 @@ export function TaskCard({ task, usersById, onToggleDone, onClick }: Props) {
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => onClick(task)}
       className={cn(
         'group rounded-xl border border-border/70 bg-card p-3 shadow-xs',
         'hover:border-ring/50 hover:shadow-sm transition-all',
+        'cursor-grab active:cursor-grabbing',
         task.status === 'done' && 'opacity-60',
       )}
-      onClick={() => onClick(task)}
     >
       <div className="flex items-start gap-2">
-        <Checkbox
-          checked={task.status === 'done'}
-          onCheckedChange={() => onToggleDone(task)}
+        <div
           onClick={(e) => e.stopPropagation()}
-          className="mt-0.5"
-        />
-        <div className="flex-1 min-w-0 cursor-pointer">
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={task.status === 'done'}
+            onCheckedChange={() => onToggleDone(task)}
+            className="mt-0.5"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
           <div
             className={cn(
               'text-sm font-medium leading-snug',
@@ -103,16 +110,6 @@ export function TaskCard({ task, usersById, onToggleDone, onClick }: Props) {
             ) : null}
           </div>
         </div>
-        <button
-          {...attributes}
-          {...listeners}
-          type="button"
-          aria-label="Arrastar"
-          className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing px-1 -mx-1 py-1"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="size-4" />
-        </button>
       </div>
     </div>
   );

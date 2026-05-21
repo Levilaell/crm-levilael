@@ -112,7 +112,7 @@ export type TranscriptionKind = 'triage_call' | 'discovery_call' | 'other';
 export type TaskStatus = 'open' | 'doing' | 'done' | 'blocked';
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low';
 
-export const TASK_PRIORITIES: readonly TaskPriority[] = ['urgent', 'high', 'medium', 'low'] as const;
+export const TASK_PRIORITIES: readonly TaskPriority[] = ['low', 'medium', 'high', 'urgent'] as const;
 
 export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
   urgent: 'Urgente',
