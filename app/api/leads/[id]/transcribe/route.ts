@@ -4,7 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service';
 import { transcribeAudio, TRANSCRIBE_MODEL } from '@/lib/openai';
 import { logAIOperation } from '@/lib/ai-log';
 
-// Whisper API rejeita arquivos > 25MB
+// Whisper rejeita > 25MB.
 const MAX_BYTES = 25 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
   'audio/mpeg',
@@ -29,54 +29,65 @@ export async function POST(
   const session = await requireCrmSession();
   const { id: leadId } = await context.params;
 
-  const form = await request.formData();
-  const file = form.get('file');
-  const kindRaw = form.get('kind');
-  const kind = typeof kindRaw === 'string' && KINDS.has(kindRaw) ? kindRaw : null;
+  let body: {
+    storage_path?: string;
+    kind?: string;
+    file_name?: string;
+    file_type?: string;
+    file_size?: number;
+  };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return NextResponse.json({ ok: false, error: 'invalid json' }, { status: 400 });
+  }
 
-  if (!(file instanceof File) || !kind) {
+  const storagePath = body.storage_path;
+  const kind = body.kind && KINDS.has(body.kind) ? body.kind : null;
+  const fileName = body.file_name ?? 'audio.m4a';
+  const fileType = body.file_type ?? 'audio/mpeg';
+  const fileSize = typeof body.file_size === 'number' ? body.file_size : null;
+
+  if (!storagePath || !kind) {
     return NextResponse.json(
-      { ok: false, error: 'missing file or invalid kind' },
+      { ok: false, error: 'missing storage_path or invalid kind' },
       { status: 422 },
     );
   }
-  if (file.size > MAX_BYTES) {
+  if (!storagePath.startsWith(`${leadId}/`)) {
+    return NextResponse.json({ ok: false, error: 'path/lead mismatch' }, { status: 422 });
+  }
+  if (fileSize !== null && fileSize > MAX_BYTES) {
     return NextResponse.json({ ok: false, error: 'file too large (max 25MB)' }, { status: 413 });
   }
-  if (file.type && !ALLOWED_TYPES.has(file.type)) {
+  if (fileType && !ALLOWED_TYPES.has(fileType)) {
     return NextResponse.json(
-      { ok: false, error: `unsupported file type: ${file.type}` },
+      { ok: false, error: `unsupported file type: ${fileType}` },
       { status: 415 },
     );
   }
 
   const admin = createServiceRoleClient();
 
-  // Upload pro Storage
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'm4a';
-  const storagePath = `${leadId}/${kind}_${Date.now()}.${ext}`;
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = new Uint8Array(arrayBuffer);
-
-  const { error: uploadErr } = await admin.storage
+  // Baixa o áudio do Storage (server-side, sem limite de body do Vercel).
+  const { data: blob, error: downloadErr } = await admin.storage
     .from('crm_audio')
-    .upload(storagePath, buffer, {
-      contentType: file.type || 'audio/mpeg',
-      upsert: false,
-    });
+    .download(storagePath);
 
-  if (uploadErr) {
-    console.error('[transcribe] upload failed', uploadErr);
-    return NextResponse.json({ ok: false, error: 'storage upload failed' }, { status: 500 });
+  if (downloadErr || !blob) {
+    console.error('[transcribe] storage download failed', downloadErr);
+    return NextResponse.json({ ok: false, error: 'storage download failed' }, { status: 500 });
   }
 
-  // Whisper transcribe (passa o File direto)
+  // Whisper precisa de um File com nome/extensão válida.
+  const audioFile = new File([blob], fileName, { type: fileType });
+
   let text: string;
   let durationSeconds: number | null;
   let model: string;
   const whisperStartedAt = Date.now();
   try {
-    const result = await transcribeAudio(file);
+    const result = await transcribeAudio(audioFile);
     text = result.text;
     durationSeconds = result.durationSeconds;
     model = result.model;

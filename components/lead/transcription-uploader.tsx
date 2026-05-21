@@ -7,11 +7,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
 import type { TranscriptionKind } from '@/types/crm';
 
 interface UploaderProps {
   leadId: string;
   kind: TranscriptionKind;
+}
+
+const MAX_BYTES = 25 * 1024 * 1024;
+
+async function parseError(res: Response): Promise<string> {
+  try {
+    const json = (await res.clone().json()) as { error?: string };
+    if (json?.error) return json.error;
+  } catch {
+    // não era JSON (provavelmente HTML do Vercel/proxy)
+  }
+  return `HTTP ${res.status}`;
 }
 
 export function TranscriptionUploader({ leadId, kind }: UploaderProps) {
@@ -23,17 +36,60 @@ export function TranscriptionUploader({ leadId, kind }: UploaderProps) {
   const [dragOver, setDragOver] = useState(false);
 
   async function uploadAudio(file: File) {
+    if (file.size > MAX_BYTES) {
+      toast.error('Arquivo grande demais', {
+        description: `Máximo 25MB · este tem ${(file.size / 1024 / 1024).toFixed(1)}MB`,
+      });
+      return;
+    }
+
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append('file', file);
-      form.append('kind', kind);
+      const ext = (file.name.split('.').pop() || 'm4a').toLowerCase();
+
+      // 1) pede signed upload URL
+      const urlRes = await fetch(`/api/leads/${leadId}/transcribe/upload-url`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kind, ext, size: file.size }),
+      });
+      if (!urlRes.ok) throw new Error(await parseError(urlRes));
+      const urlJson = (await urlRes.json()) as {
+        ok: boolean;
+        error?: string;
+        data?: { path: string; token: string };
+      };
+      if (!urlJson.ok || !urlJson.data) throw new Error(urlJson.error ?? 'signed url failed');
+
+      // 2) sobe direto pro Storage (sem passar pelo Vercel function body de 4.5MB)
+      const supabase = createClient();
+      const { error: uploadErr } = await supabase.storage
+        .from('crm_audio')
+        .uploadToSignedUrl(urlJson.data.path, urlJson.data.token, file, {
+          contentType: file.type || 'audio/mpeg',
+        });
+      if (uploadErr) throw new Error(uploadErr.message || 'upload failed');
+
+      // 3) dispara transcrição
       const res = await fetch(`/api/leads/${leadId}/transcribe`, {
         method: 'POST',
-        body: form,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          storage_path: urlJson.data.path,
+          kind,
+          file_name: file.name,
+          file_type: file.type || 'audio/mpeg',
+          file_size: file.size,
+        }),
       });
-      const json = (await res.json()) as { ok: boolean; error?: string; data?: { word_count: number; duration_seconds: number | null } };
-      if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(await parseError(res));
+      const json = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        data?: { word_count: number; duration_seconds: number | null };
+      };
+      if (!json.ok) throw new Error(json.error ?? 'transcription failed');
+
       toast.success('Transcrição pronta', {
         description: `${json.data?.word_count ?? '?'} palavras${json.data?.duration_seconds ? ` · ${json.data.duration_seconds}s` : ''}`,
       });
@@ -56,8 +112,9 @@ export function TranscriptionUploader({ leadId, kind }: UploaderProps) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ kind, text: pastedText }),
       });
+      if (!res.ok) throw new Error(await parseError(res));
       const json = (await res.json()) as { ok: boolean; error?: string };
-      if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      if (!json.ok) throw new Error(json.error ?? 'save failed');
       setPastedText('');
       toast.success('Transcrição salva');
       router.refresh();
@@ -92,10 +149,10 @@ export function TranscriptionUploader({ leadId, kind }: UploaderProps) {
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          className={`border-2 border-dashed rounded-md p-8 text-center cursor-pointer transition-colors ${
+          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
             dragOver
-              ? 'border-primary bg-primary/5'
-              : 'border-border hover:border-ring/60'
+              ? 'border-brand bg-brand/5'
+              : 'border-border hover:border-ring/60 hover:bg-muted/30'
           }`}
           onClick={() => fileInputRef.current?.click()}
         >
