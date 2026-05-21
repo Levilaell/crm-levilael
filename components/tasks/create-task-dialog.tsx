@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { TASK_PRIORITIES, TASK_PRIORITY_LABELS, type TaskPriority } from '@/types/crm';
 
 interface Props {
   users: Array<{ id: string; display_name: string }>;
@@ -35,6 +36,7 @@ export function CreateTaskDialog({ users, defaultLeadId }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState('__none__');
+  const [priority, setPriority] = useState<TaskPriority>('medium');
   const [dueAt, setDueAt] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -49,6 +51,7 @@ export function CreateTaskDialog({ users, defaultLeadId }: Props) {
           description: description || null,
           assignee_id: assigneeId === '__none__' ? null : assigneeId,
           lead_id: defaultLeadId ?? null,
+          priority,
           due_at: dueAt ? new Date(dueAt).toISOString() : null,
         }),
       });
@@ -59,6 +62,7 @@ export function CreateTaskDialog({ users, defaultLeadId }: Props) {
       setTitle('');
       setDescription('');
       setAssigneeId('__none__');
+      setPriority('medium');
       setDueAt('');
       router.refresh();
     } catch (err) {
@@ -103,19 +107,15 @@ export function CreateTaskDialog({ users, defaultLeadId }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Responsável</Label>
-              <Select
-                value={assigneeId}
-                onValueChange={(v) => setAssigneeId(v ?? '__none__')}
-              >
+              <Label>Prioridade</Label>
+              <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Sem responsável</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.display_name}
+                  {TASK_PRIORITIES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {TASK_PRIORITY_LABELS[p]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -130,6 +130,25 @@ export function CreateTaskDialog({ users, defaultLeadId }: Props) {
                 onChange={(e) => setDueAt(e.target.value)}
               />
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Responsável</Label>
+            <Select
+              value={assigneeId}
+              onValueChange={(v) => setAssigneeId(v ?? '__none__')}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Sem responsável</SelectItem>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>

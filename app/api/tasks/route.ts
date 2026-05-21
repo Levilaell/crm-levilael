@@ -9,6 +9,7 @@ const PostSchema = z.object({
   assignee_id: z.string().uuid().nullable().optional(),
   lead_id: z.string().uuid().nullable().optional(),
   due_at: z.string().datetime().nullable().optional(),
+  priority: z.enum(['urgent', 'high', 'medium', 'low']).optional(),
 });
 
 export async function POST(request: Request) {
@@ -23,6 +24,18 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ ok: false, error: 'invalid body' }, { status: 422 });
 
   const admin = createServiceRoleClient();
+  const priority = parsed.data.priority ?? 'medium';
+
+  // Nova task entra no topo da coluna de prioridade — pega menor position e subtrai 1.
+  const { data: minRow } = await admin
+    .from('crm_tasks')
+    .select('position')
+    .eq('priority', priority)
+    .order('position', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const minPos = (minRow as { position: number } | null)?.position ?? 0;
+
   const { data, error } = await admin
     .from('crm_tasks')
     .insert({
@@ -31,6 +44,8 @@ export async function POST(request: Request) {
       assignee_id: parsed.data.assignee_id ?? null,
       lead_id: parsed.data.lead_id ?? null,
       due_at: parsed.data.due_at ?? null,
+      priority,
+      position: minPos - 1,
       created_by: session.crmUser.id,
     })
     .select('id')

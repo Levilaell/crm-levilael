@@ -1,5 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/service';
-import type { TaskStatus } from '@/types/crm';
+import type { TaskPriority, TaskStatus } from '@/types/crm';
 
 export interface TaskRow {
   id: string;
@@ -8,6 +8,8 @@ export interface TaskRow {
   description: string | null;
   assignee_id: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
+  position: number;
   due_at: string | null;
   completed_at: string | null;
   created_by: string | null;
@@ -27,8 +29,9 @@ export async function listTasks(filters: TaskFilters = {}): Promise<TaskRow[]> {
   let q = admin
     .from('crm_tasks')
     .select(
-      'id, lead_id, title, description, assignee_id, status, due_at, completed_at, created_by, created_at, updated_at, crm_leads(name)',
+      'id, lead_id, title, description, assignee_id, status, priority, position, due_at, completed_at, created_by, created_at, updated_at, crm_leads(name)',
     )
+    .order('position', { ascending: true })
     .order('due_at', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
 

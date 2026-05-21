@@ -9,6 +9,8 @@ const PatchSchema = z
     description: z.string().max(2000).nullable().optional(),
     assignee_id: z.string().uuid().nullable().optional(),
     status: z.enum(['open', 'doing', 'done', 'blocked']).optional(),
+    priority: z.enum(['urgent', 'high', 'medium', 'low']).optional(),
+    position: z.number().int().optional(),
     due_at: z.string().datetime().nullable().optional(),
   })
   .strict();

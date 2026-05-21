@@ -1,7 +1,7 @@
 import { requireCrmSession } from '@/lib/auth';
 import { listTasks } from '@/lib/tasks';
 import { listCrmUsers } from '@/lib/leads';
-import { TaskList } from '@/components/tasks/task-list';
+import { TaskBoard } from '@/components/tasks/task-board';
 import { CreateTaskDialog } from '@/components/tasks/create-task-dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
@@ -10,24 +10,24 @@ export default async function TasksPage() {
   const users = await listCrmUsers();
   const usersById = Object.fromEntries(users.map((u) => [u.id, u.display_name]));
 
-  const [myOpen, allOpen, doneList] = await Promise.all([
-    listTasks({ assigneeId: session.crmUser.id, status: 'open' }),
-    listTasks({ status: 'open' }),
+  const [allTasks, doneList] = await Promise.all([
+    listTasks(),
     listTasks({ status: 'done' }),
   ]);
 
-  // Filtrar minhas pendentes excluindo done
-  const myList = await listTasks({ assigneeId: session.crmUser.id });
-  const minePending = myList.filter((t) => t.status !== 'done');
-  void myOpen;
-  void allOpen;
+  const minePending = allTasks.filter(
+    (t) => t.assignee_id === session.crmUser.id && t.status !== 'done',
+  );
+  const allOpen = allTasks.filter((t) => t.status !== 'done');
 
   return (
-    <div className="flex flex-col gap-4 max-w-4xl">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tarefas</h1>
-          <p className="text-sm text-muted-foreground">{minePending.length} suas, abertas</p>
+          <p className="text-sm text-muted-foreground">
+            {minePending.length} suas, abertas — arraste pra reorganizar
+          </p>
         </div>
         <CreateTaskDialog users={users} />
       </div>
@@ -35,27 +35,22 @@ export default async function TasksPage() {
       <Tabs defaultValue="mine">
         <TabsList>
           <TabsTrigger value="mine">Minhas ({minePending.length})</TabsTrigger>
-          <TabsTrigger value="all">Todas abertas ({(await listTasks({ status: 'open' })).length})</TabsTrigger>
+          <TabsTrigger value="all">Todas abertas ({allOpen.length})</TabsTrigger>
           <TabsTrigger value="done">Concluídas ({doneList.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="mine">
-          <TaskList tasks={minePending} usersById={usersById} />
+          <TaskBoard tasks={minePending} usersById={usersById} users={users} />
         </TabsContent>
 
         <TabsContent value="all">
-          <AllTasks usersById={usersById} />
+          <TaskBoard tasks={allOpen} usersById={usersById} users={users} />
         </TabsContent>
 
         <TabsContent value="done">
-          <TaskList tasks={doneList} usersById={usersById} />
+          <TaskBoard tasks={doneList} usersById={usersById} users={users} />
         </TabsContent>
       </Tabs>
     </div>
   );
-}
-
-async function AllTasks({ usersById }: { usersById: Record<string, string> }) {
-  const tasks = await listTasks({ status: 'open' });
-  return <TaskList tasks={tasks} usersById={usersById} />;
 }
