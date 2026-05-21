@@ -4,7 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service';
 import { notifyNewLead } from '@/lib/notifications';
 
 const PayloadSchema = z.object({
-  source: z.enum(['diagnosis', 'calcom', 'manual', 'telegram', 'referral']),
+  source: z.enum(['whatsapp_form', 'calcom', 'manual', 'referral']),
   source_lead_id: z.string().uuid().optional(),
   name: z.string().min(1).max(200),
   email: z.string().email().optional().nullable(),
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     company_name: string | null;
     phone: string | null;
     email: string | null;
-    source: 'diagnosis' | 'calcom' | 'manual' | 'telegram' | 'referral';
+    source: 'whatsapp_form' | 'calcom' | 'manual' | 'referral';
     qualification: 'AAA' | 'AA' | 'A' | 'B' | 'C' | null;
     diagnosis_score: number | null;
   };

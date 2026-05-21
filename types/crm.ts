@@ -88,21 +88,19 @@ export const QUALIFICATION_COLORS: Record<Qualification, string> = {
   C: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/40',
 };
 
-export type LeadSource = 'diagnosis' | 'calcom' | 'manual' | 'telegram' | 'referral';
+export type LeadSource = 'whatsapp_form' | 'calcom' | 'manual' | 'referral';
 
 export const LEAD_SOURCES: readonly LeadSource[] = [
-  'diagnosis',
+  'whatsapp_form',
   'calcom',
   'manual',
-  'telegram',
   'referral',
 ] as const;
 
 export const SOURCE_LABELS: Record<LeadSource, string> = {
-  diagnosis: 'Diagnóstico',
+  whatsapp_form: 'WhatsApp form',
   calcom: 'Cal.com',
   manual: 'Manual',
-  telegram: 'Telegram',
   referral: 'Indicação',
 };
 
@@ -257,19 +255,46 @@ export interface BriefingDiscovery {
 }
 
 // ============================================================================
-// Webhook payload (site → CRM)
+// Webhook payloads (site → CRM)
 // ============================================================================
 
+// "Vamos conversar" form OU Cal.com → cria lead, dispara Telegram
 export interface WebhookLeadPayload {
-  source: LeadSource;
-  source_lead_id?: string;
+  source: 'whatsapp_form' | 'calcom';
   name: string;
-  email?: string;
-  phone?: string;
-  company_name?: string;
-  role_title?: string;
-  diagnosis_score?: number;
-  diagnosis_answers?: Record<string, unknown>;
+  email?: string | null;
+  phone: string;
+  company_name?: string | null;
+  message?: string | null;
+  calcom_event_uri?: string | null;
+}
+
+// Diagnóstico completado → vira snapshot, NÃO dispara nada
+export interface WebhookDiagnosisPayload {
+  source_diagnosis_id: string;
+  email?: string | null;
+  phone?: string | null;
+  name?: string | null;
+  score: number;
+  answers: Record<string, unknown>;
+  ai_analysis?: Record<string, unknown> | null;
+  completed_at: string;
+}
+
+// Snapshot armazenado no CRM
+export interface DiagnosisSnapshot {
+  id: string;
+  source_diagnosis_id: string | null;
+  email: string | null;
+  phone: string | null;
+  name: string | null;
+  score: number;
+  answers: Record<string, unknown>;
+  ai_analysis: Record<string, unknown> | null;
+  completed_at: string;
+  converted_to_lead_id: string | null;
+  converted_at: string | null;
+  created_at: string;
 }
 
 // ============================================================================
