@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from '@/lib/supabase/service';
 import { escapeHtml, leadUrl, sendTelegram } from '@/lib/telegram';
+import { formatPhoneBRDisplay } from '@/lib/phone';
 import type { LeadSource, Qualification } from '@/types/crm';
 import { SOURCE_LABELS } from '@/types/crm';
 
@@ -12,6 +13,12 @@ interface NotifyNewLeadArgs {
   source: LeadSource;
   qualification?: Qualification | null;
   diagnosisScore?: number | null;
+  matchedDiagnosis?: boolean;
+  message?: string | null;
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
 }
 
 /**
@@ -27,20 +34,28 @@ export async function notifyNewLead(args: NotifyNewLeadArgs): Promise<number> {
 
   if (error || !users?.length) return 0;
 
-  const lines = [
-    `🆕 <b>Lead novo:</b> ${escapeHtml(args.name)}`,
+  const phoneDisplay = args.phone ? formatPhoneBRDisplay(args.phone) : null;
+  const lines: (string | null)[] = [
+    `🆕 <b>LEAD:</b> ${escapeHtml(args.name)}`,
+    `🔥 Origem: ${SOURCE_LABELS[args.source]}`,
     args.companyName ? `🏢 ${escapeHtml(args.companyName)}` : null,
-    args.qualification || typeof args.diagnosisScore === 'number'
-      ? `📊 ${args.qualification ? args.qualification + ' · ' : ''}${
-          typeof args.diagnosisScore === 'number' ? `score ${args.diagnosisScore}/100` : ''
-        }`.trim()
-      : null,
-    args.phone ? `📱 ${escapeHtml(args.phone)}` : null,
+    phoneDisplay ? `📱 ${escapeHtml(phoneDisplay)}` : null,
     args.email ? `✉️ ${escapeHtml(args.email)}` : null,
-    `📥 origem: ${SOURCE_LABELS[args.source]}`,
-  ].filter(Boolean) as string[];
+  ];
+  if (args.matchedDiagnosis) {
+    const scoreSuffix = typeof args.diagnosisScore === 'number'
+      ? ` (score ${args.diagnosisScore}/100)`
+      : '';
+    lines.push(`🧠 Tem diagnóstico prévio${scoreSuffix}`);
+  }
+  if (args.qualification) {
+    lines.push(`📊 Qualificação prévia: ${args.qualification}`);
+  }
+  if (args.message) {
+    lines.push(`💬 "${escapeHtml(truncate(args.message, 120))}"`);
+  }
 
-  const text = lines.join('\n');
+  const text = (lines.filter(Boolean) as string[]).join('\n');
   const url = leadUrl(args.leadId, 'overview');
 
   let sent = 0;

@@ -2,26 +2,30 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServiceRoleClient } from '@/lib/supabase/service';
 import { notifyNewLead } from '@/lib/notifications';
+import { normalizePhoneBR } from '@/lib/phone';
+import { findMatchingSnapshot, markSnapshotConverted } from '@/lib/diagnosis-snapshots';
 
 const PayloadSchema = z.object({
-  source: z.enum(['whatsapp_form', 'calcom', 'manual', 'referral']),
-  source_lead_id: z.string().uuid().optional(),
+  source: z.enum(['whatsapp_form', 'calcom']),
   name: z.string().min(1).max(200),
-  email: z.string().email().optional().nullable(),
-  phone: z.string().max(50).optional().nullable(),
-  company_name: z.string().max(200).optional().nullable(),
-  role_title: z.string().max(120).optional().nullable(),
-  diagnosis_score: z.number().int().min(0).max(100).optional().nullable(),
-  diagnosis_answers: z.record(z.string(), z.unknown()).optional().nullable(),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().min(1).max(50),
+  company_name: z.string().max(200).nullable().optional(),
+  message: z.string().max(2000).nullable().optional(),
+  calcom_event_uri: z.string().url().nullable().optional(),
 });
 
+/**
+ * Recebido quando alguém preenche o formulário "Vamos conversar" OU
+ * agenda no Cal.com. ESSE é o gatilho real de lead — cria registro,
+ * faz matching com diagnostic snapshot prévio, dispara Telegram.
+ */
 export async function POST(request: Request) {
   const expected = process.env.CRM_WEBHOOK_SECRET;
   if (!expected) {
     return NextResponse.json({ ok: false, error: 'server not configured' }, { status: 500 });
   }
-  const provided = request.headers.get('x-webhook-secret');
-  if (provided !== expected) {
+  if (request.headers.get('x-webhook-secret') !== expected) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
 
@@ -39,48 +43,64 @@ export async function POST(request: Request) {
     );
   }
   const payload = parsed.data;
-  const admin = createServiceRoleClient();
-
-  // Idempotência: se já existe lead com (source, source_lead_id), retorna o existente
-  if (payload.source_lead_id) {
-    const { data: existing } = await admin
-      .from('crm_leads')
-      .select('id, name, company_name, phone, email, source, qualification, diagnosis_score')
-      .eq('source', payload.source)
-      .eq('source_lead_id', payload.source_lead_id)
-      .maybeSingle();
-    if (existing) {
-      return NextResponse.json({
-        id: (existing as { id: string }).id,
-        telegram_sent: false,
-        created: false,
-      });
-    }
+  const phoneNormalized = normalizePhoneBR(payload.phone);
+  if (!phoneNormalized) {
+    return NextResponse.json(
+      { ok: false, error: 'phone could not be normalized to BR format' },
+      { status: 422 },
+    );
   }
 
-  // Insert lead
+  const admin = createServiceRoleClient();
+
+  // Idempotência: unique (source, phone) na tabela. Se já existir, retorna.
+  const { data: existing } = await admin
+    .from('crm_leads')
+    .select('id, name')
+    .eq('source', payload.source)
+    .eq('phone', phoneNormalized)
+    .maybeSingle();
+  if (existing) {
+    const row = existing as { id: string; name: string };
+    return NextResponse.json({
+      id: row.id,
+      telegram_sent: false,
+      matched_diagnosis: false,
+      duplicate: true,
+    });
+  }
+
+  // Matching com diagnosis snapshot recente
+  const snapshot = await findMatchingSnapshot({
+    email: payload.email ?? null,
+    phoneNormalized,
+  });
+
+  const insertFields: Record<string, unknown> = {
+    source: payload.source,
+    name: payload.name,
+    email: payload.email?.toLowerCase() ?? null,
+    phone: phoneNormalized,
+    company_name: payload.company_name ?? null,
+    notes: payload.message ?? null,
+    stage: 'new',
+  };
+  if (snapshot) {
+    insertFields.matched_diagnosis_id = snapshot.id;
+    insertFields.diagnosis_answers = snapshot.answers;
+    insertFields.diagnosis_score = snapshot.score;
+  }
+
   const { data: inserted, error: insertErr } = await admin
     .from('crm_leads')
-    .insert({
-      source: payload.source,
-      source_lead_id: payload.source_lead_id ?? null,
-      name: payload.name,
-      email: payload.email ?? null,
-      phone: payload.phone ?? null,
-      company_name: payload.company_name ?? null,
-      role_title: payload.role_title ?? null,
-      diagnosis_answers: payload.diagnosis_answers ?? null,
-      diagnosis_score: payload.diagnosis_score ?? null,
-      stage: 'new',
-    })
+    .insert(insertFields)
     .select('id, name, company_name, phone, email, source, qualification, diagnosis_score')
     .single();
 
   if (insertErr || !inserted) {
-    console.error('[webhook] insert failed', insertErr);
+    console.error('[webhook/lead] insert failed', insertErr);
     return NextResponse.json({ ok: false, error: 'insert failed' }, { status: 500 });
   }
-
   const lead = inserted as {
     id: string;
     name: string;
@@ -92,10 +112,19 @@ export async function POST(request: Request) {
     diagnosis_score: number | null;
   };
 
+  if (snapshot) {
+    await markSnapshotConverted(snapshot.id, lead.id);
+  }
+
   await admin.from('crm_lead_events').insert({
     lead_id: lead.id,
     event_type: 'lead_created',
-    payload: { source: payload.source, source_lead_id: payload.source_lead_id ?? null },
+    payload: {
+      source: payload.source,
+      matched_diagnosis: !!snapshot,
+      diagnosis_snapshot_id: snapshot?.id ?? null,
+      calcom_event_uri: payload.calcom_event_uri ?? null,
+    },
   });
 
   const sentCount = await notifyNewLead({
@@ -107,7 +136,14 @@ export async function POST(request: Request) {
     source: lead.source,
     qualification: lead.qualification,
     diagnosisScore: lead.diagnosis_score,
+    matchedDiagnosis: !!snapshot,
+    message: payload.message ?? null,
   });
 
-  return NextResponse.json({ id: lead.id, telegram_sent: sentCount > 0, created: true });
+  return NextResponse.json({
+    id: lead.id,
+    telegram_sent: sentCount > 0,
+    matched_diagnosis: !!snapshot,
+    duplicate: false,
+  });
 }
