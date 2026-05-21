@@ -31,8 +31,26 @@ Tudo abaixo está documentado em `DEPLOY.md` passo a passo.
 - Validar Cal.com webhook
 - Validar match diagnostic → lead com dados reais
 
+## Atenção — PII em commit histórico
+
+O sample inicial `samples/diagnosis_real.json` foi commitado em `44b0163`
+com nome/email/whatsapp reais. O HEAD atual já está redactado, mas o git
+history ainda tem o original. Se você for tornar o repo público ou
+compartilhar, considere:
+
+- `git filter-repo --path samples/diagnosis_real.json --invert-paths`
+  (reescreve história, exige force-push e quem clonou re-clona)
+- ou aceitar o risco se o repo for sempre privado
+
+Decisão sua.
+
 ## Limites conhecidos / decisões pra revisitar
 
+- **`shouldCreateUser: true`** no magic link cria linha em `auth.users` pra
+  qualquer email. O whitelist em `crm_users` bloqueia acesso (não vaza nada),
+  mas a tabela cresce. `findAuthUserByEmail` no seed pagina só `perPage: 200`
+  — irrelevante pros 2 usuários atuais; ajustar paginação se `auth.users`
+  passar disso.
 - **Cron SLA a cada 10min** (`*/10 * * * *`) — depende de Vercel **Pro**
   (Hobby restringe pra 1/dia). Se algum dia voltar pro Hobby, mudar pra
   `0 */6 * * *` em `vercel.json`.
