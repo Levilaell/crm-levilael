@@ -57,15 +57,16 @@ Pra alinhar visual entre site e CRM. Levi: lista os components.json ou cola o ar
 
 1. ✅ Mesmo projeto Supabase — confirmado.
 2. ✅ Bot Telegram existe — confirmado.
-3. ✅ Diagnosis answers como blob genérico — confirmado.
-4. ⏳ URL exata do Supabase + service key (pra rodar local e deploy).
-5. ⏳ Anthropic key (pode reutilizar do site).
-6. ⏳ OpenAI key (precisa criar/copiar do dashboard).
-7. ⏳ Bot token + seu chat_id Telegram.
-8. ⏳ Schema exato de `leads` e `diagnoses` do site (pra confirmar source_lead_id refere bem e diagnosis_answers tem campos esperáveis).
+3. ✅ Diagnosis answers tipados via `samples/diagnosis_real.json`.
+4. ✅ Definição de lead alinhada: form "Vamos conversar" + Cal.com.
+5. ⏳ URL exata do Supabase + service key (pra rodar local e deploy).
+6. ⏳ Anthropic key (pode reutilizar do site).
+7. ⏳ OpenAI key (precisa criar/copiar do dashboard).
+8. ⏳ Bot token + chat_ids Telegram (admin + operator).
 
 ## Status do CRM (entregue)
 
+### v1
 - ✅ Schema CRM completo em `supabase/migrations/0001_crm_schema.sql` (10 tabelas, RLS, buckets de Storage).
 - ✅ Auth magic link + whitelist em `crm_users` (validado no layout, não no middleware — mais barato).
 - ✅ Kanban com 6 colunas + drag-drop (@dnd-kit) + filtros (owner, qualif, origem, busca).
@@ -76,8 +77,24 @@ Pra alinhar visual entre site e CRM. Levi: lista os components.json ou cola o ar
 - ✅ Script de descoberta + slides HTML (com botão print pra PDF).
 - ✅ Proposta com ondas auto-sincronizadas do briefing 2.
 - ✅ Tasks com assignee + status + filtros.
-- ✅ Settings: perfil + notificações + health checks (Supabase, Anthropic, OpenAI, Telegram).
+- ✅ Settings: perfil + notificações + health checks.
 - ✅ Webhook do site (idempotente) + Telegram notifications.
-- ✅ Cron SLA (a cada 2h, ajustável se Pro).
-- ✅ Error boundaries + loading states + 404.
+- ✅ Cron SLA + Error boundaries + loading states + 404.
+
+### Ajustes pós-v1
+- ✅ `middleware.ts` → `proxy.ts` (Next 16).
+- ✅ Cron SLA `*/10` (Pro) + `lib/sla.ts` centralizando thresholds.
+- ✅ Migration 0002: separação diagnosis vs. lead + novo enum source +
+   `matched_diagnosis_id` + unique `(source, phone)`.
+- ✅ 2 webhooks: `diagnosis-completed` (snapshot, sem Telegram) e
+   `lead-from-site` (cria lead com matching + dispara Telegram).
+- ✅ `lib/phone.ts` normaliza E.164 BR + valida DDD.
+- ✅ Matching email/phone últimos 90 dias.
+- ✅ Telegram com badge match + preview da mensagem.
+- ✅ Página `/diagnoses` + `/leads/new` + sidebar item Diagnósticos.
+- ✅ Tipagem diagnosis com labels PT-BR + render por seção da análise IA.
+- ✅ Cron `/api/cron/health-check` diário 9h.
+- ✅ `crm_ai_logs` + dashboard `/settings/ai-usage` (custo mês, breakdown,
+   top leads, gráfico 30d).
+- ✅ Docs: `DEPLOY.md`, `SMOKE_TEST.md`, `INTEGRATIONS.md` reescrito.
 - ✅ Build limpo: tsc sem erros, `next build` passou com placeholders.

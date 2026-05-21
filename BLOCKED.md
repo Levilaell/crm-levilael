@@ -4,52 +4,64 @@ Lista do que está esperando input externo. Vazio = nada bloqueado.
 
 ## Atualmente bloqueado (precisam de você)
 
-- **Env vars de produção:** preencher `.env.local` (copia do `.env.example`) com:
-  - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — do mesmo projeto Supabase do site
-  - `ANTHROPIC_API_KEY` — pode reutilizar a do site
-  - `OPENAI_API_KEY` — gerar nova (Whisper)
-  - `TELEGRAM_BOT_TOKEN` — do bot já existente
-  - `CRM_WEBHOOK_SECRET` — string aleatória forte (`openssl rand -hex 32`)
-  - `CRM_ADMIN_EMAIL` + `CRM_OPERATOR_EMAIL` — seus emails
-  - `CRON_SECRET` — outra string aleatória pra autenticar o cron
-  - `NEXT_PUBLIC_APP_URL` — `https://crm.levilael.com.br` em prod, `http://localhost:3000` em dev
+Tudo abaixo está documentado em `DEPLOY.md` passo a passo.
 
-- **Aplicar migration no Supabase:** copiar `supabase/migrations/0001_crm_schema.sql` e rodar no SQL Editor do dashboard. Não roda 2x — é one-shot. Em CLI: `supabase db push` se o projeto estiver linkado.
-
-- **Seed inicial:** depois das envs:
-  ```bash
-  pnpm tsx scripts/seed-users.ts
-  ```
-  O script cria ambos os usuários direto em `auth.users` (via service role) + `crm_users`. Daí já pode fazer sign-in via magic link.
-
-- **Repo do site:** implementar a chamada ao webhook em `INTEGRATIONS.md`. Snippet TS pronto, é só colar no `/api/diagnosis/submit` (ou onde grava lead novo).
-
-- **Vercel:**
-  1. Criar projeto (`vercel link` ou via dashboard)
-  2. Setar todas as env vars (use `vercel env add` por var ou import bulk)
-  3. Apontar `crm.levilael.com.br` em Domains
-  4. Deploy: `vercel --prod`
+- **Env vars no Vercel:** `NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`,
+  `CRM_WEBHOOK_SECRET`, `CRON_SECRET`, `NEXT_PUBLIC_APP_URL`, `CRM_ADMIN_*`,
+  `CRM_OPERATOR_*`.
+- **Aplicar migrations em ordem:** `0001_crm_schema.sql`,
+  `0002_diagnosis_separation.sql`, `0003_ai_logs.sql`.
+- **Custom domain:** apontar `crm.levilael.com.br` → `cname.vercel-dns.com`
+  no Registro.br/CF.
+- **Seed:** `pnpm tsx scripts/seed-users.ts` (cria auth.users + crm_users
+  num passo só).
+- **Repo do site:** colar os 2 snippets de `INTEGRATIONS.md`
+  (notifyCrmOfDiagnosisCompleted + notifyCrmOfNewLead) nos endpoints
+  correspondentes (`/api/diagnosis/submit` e `/api/contact`).
+- **Cal.com webhook:** seguir §4 de `INTEGRATIONS.md` (URL + secret +
+  payload template).
+- **Smoke test pós-deploy:** rodar `SMOKE_TEST.md` end-to-end.
 
 ## Sem credenciais — não consegui executar daqui
 
-- Aplicar migration no Supabase de produção
-- Rodar `next build` com env reais (rodei com placeholders, passou)
-- Validar webhook end-to-end com site
-- Testar Telegram com bot real
-- Smoke test no deploy preview
+- Aplicar migrations no Supabase prod
+- Smoke test em deploy real (rodei `tsc --noEmit` e `next build` localmente
+  com placeholders — ambos passam)
+- Validar Cal.com webhook
+- Validar match diagnostic → lead com dados reais
 
-## Limites conhecidos / decisões pra rever
+## Limites conhecidos / decisões pra revisitar
 
-- **Cron SLA roda a cada 2h** (`0 */2 * * *` em `vercel.json`) pra ficar dentro do limite de invocations do Vercel Hobby (~20/dia). Se você for Pro, pode aumentar pra `*/10 * * * *` (cada 10 min, conforme spec original) ou `*/30 * * * *`.
-- **Whisper max = 25MB** (limite da OpenAI). Áudios maiores precisam ser cortados antes. Calls de 30min em mono/64kbps cabem.
-- **`middleware.ts` está deprecated em Next 16** — funciona, mas ideal renomear pra `proxy.ts` e exportar `proxy()` em vez de `middleware()`. Cleanup futuro.
-- **PDF de slides v1 = HTML standalone + window.print()** (não puppeteer). Puppeteer-core + @sparticuz/chromium estão instalados mas não usados — deixei pra v2.
+- **Cron SLA a cada 10min** (`*/10 * * * *`) — depende de Vercel **Pro**
+  (Hobby restringe pra 1/dia). Se algum dia voltar pro Hobby, mudar pra
+  `0 */6 * * *` em `vercel.json`.
+- **Whisper max = 25MB** (limite da OpenAI). Áudios maiores precisam ser
+  cortados antes. Calls de 30min em mono/64kbps cabem.
+- **PDF de slides = HTML standalone + `window.print()`** (não puppeteer).
+  Puppeteer-core + @sparticuz/chromium estão instalados mas não usados —
+  ficam pra v2 quando o atrito de "abre nova aba, Ctrl+P" incomodar de
+  verdade.
+- **`USD_TO_BRL = 5.5` hardcoded** em `lib/ai-log.ts`. Custo é estimativa,
+  não contábil. Atualizar quando o spread incomodar.
+- **Custos por modelo hardcoded** em `lib/ai-log.ts` — atualizar se mudar
+  preço ou trocar modelo padrão.
+- **DiagnosisAIAnalysis tipa só os 6 campos vistos no sample.** Se o site
+  começar a emitir campos novos no `ai_analysis`, o componente tipado vai
+  ignorá-los silenciosamente. Atualizar `types/diagnosis.ts` quando isso
+  acontecer.
+- **Backfill da migration 0002** está como bloco SQL comentado. Descomentar
+  na hora de aplicar se houver dados em prod com `source='diagnosis'` ou
+  `source='telegram'` (que viraram inválidos no novo enum).
 
 ## Resolvidos
 
-- ✅ Escopo confirmado (constrói tudo, 17 etapas).
+- ✅ Escopo confirmado (constrói tudo, 17 etapas v1 + ajustes pós-v1).
 - ✅ Supabase compartilhado (mesmo projeto do site).
 - ✅ Telegram bot já existe.
-- ✅ Diagnosis answers como blob genérico no v1.
+- ✅ Diagnosis answers tipados (sample em `samples/diagnosis_real.json`).
 - ✅ Build local passou com tsc + next build (placeholders).
-- ✅ Bootstrap simplificado: o seed cria o user em `auth.users` se não existir, então não precisa de "sign-in primeiro".
+- ✅ Bootstrap simplificado: seed cria user em `auth.users` se não existir.
+- ✅ `middleware.ts` → `proxy.ts` (deprecation Next 16 resolvida).
+- ✅ Definição oficial de lead alinhada: form "Vamos conversar" + Cal.com,
+   nada mais.

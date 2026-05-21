@@ -1,109 +1,260 @@
 # Integrações
 
-## Site → CRM (webhook de lead novo)
+Como o repo do site, o Cal.com e (futuramente) outros canais conversam com o CRM.
 
-Quando o site cria um lead (via diagnóstico, formulário manual, etc), dispara POST pro CRM.
+---
 
-### Endpoint
+## 1. Visão geral dos endpoints
 
-```
-POST https://crm.levilael.com.br/api/webhooks/lead-from-site
-```
+| Endpoint                                       | Quem chama         | O que faz                              | Dispara Telegram? |
+|------------------------------------------------|--------------------|----------------------------------------|-------------------|
+| `POST /api/webhooks/diagnosis-completed`       | Site (após /api/diagnosis/submit) | Armazena snapshot do diagnóstico | **Não** |
+| `POST /api/webhooks/lead-from-site`            | Site (após /api/contact) ou Cal.com | Cria lead, faz matching com snapshot prévio | **Sim** |
 
-### Headers
+**Header de segurança em ambos:** `x-webhook-secret: ${CRM_WEBHOOK_SECRET}`.
 
-```
-content-type: application/json
-x-webhook-secret: <CRM_WEBHOOK_SECRET>
-```
+---
 
-### Body
+## 2. Site → CRM — diagnóstico completado
+
+**Quando chamar:** depois que `diagnoses.insert` retornar no site (ou seja:
+diagnóstico salvo no banco do site).
+
+**Por quê:** o CRM precisa do snapshot pra fazer matching com lead futuro
+quando a pessoa clicar em "Vamos conversar".
+
+### Payload
 
 ```json
 {
-  "source": "diagnosis",
-  "source_lead_id": "uuid-do-lead-no-site",
-  "name": "João Silva",
+  "source_diagnosis_id": "uuid-do-diagnostico-no-site",
   "email": "joao@contabilxyz.com.br",
-  "phone": "+5511999999999",
-  "company_name": "Contábil XYZ",
-  "diagnosis_score": 85,
-  "diagnosis_answers": {
-    "porte": "30 funcionários",
-    "erp": "Domínio",
-    "dor_principal": "triagem de documentos"
+  "phone": "(11) 99999-8888",
+  "name": "João Silva",
+  "score": 75,
+  "answers": { /* todos os q1_size, q2_*, q3_*, ... */ },
+  "ai_analysis": { /* opcional: análise IA gerada no site */ },
+  "completed_at": "2026-05-20T18:45:23Z"
+}
+```
+
+`source_diagnosis_id` é **idempotente** — chamar 2x retorna o mesmo registro.
+
+### Resposta
+
+```json
+{ "id": "uuid-do-snapshot", "status": "stored", "duplicate": false }
+```
+
+### Snippet TypeScript (pra colar no site)
+
+```ts
+// lib/crm-webhook.ts no repo do site
+export async function notifyCrmOfDiagnosisCompleted(diagnosis: {
+  id: string;
+  email?: string | null;
+  phone?: string | null;
+  name?: string | null;
+  score: number;
+  answers: Record<string, unknown>;
+  ai_analysis?: Record<string, unknown> | null;
+  created_at: string;
+}) {
+  try {
+    const res = await fetch(
+      `${process.env.CRM_URL}/api/webhooks/diagnosis-completed`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-webhook-secret': process.env.CRM_WEBHOOK_SECRET!,
+        },
+        body: JSON.stringify({
+          source_diagnosis_id: diagnosis.id,
+          email: diagnosis.email,
+          phone: diagnosis.phone,
+          name: diagnosis.name,
+          score: diagnosis.score,
+          answers: diagnosis.answers,
+          ai_analysis: diagnosis.ai_analysis,
+          completed_at: diagnosis.created_at,
+        }),
+      },
+    );
+    if (!res.ok) {
+      console.error('[crm] diagnosis webhook failed', res.status, await res.text());
+    }
+  } catch (err) {
+    console.error('[crm] diagnosis webhook error', err);
+    // não bloqueia resposta pro usuário do site
   }
 }
 ```
 
-`source` aceita: `diagnosis`, `calcom`, `manual`, `telegram`, `referral`.
+---
 
-`source_lead_id` é opcional mas recomendado — torna o endpoint idempotente. Se já existir um `crm_leads` com esse `source_lead_id`, retorna o existente sem duplicar.
+## 3. Site → CRM — lead via formulário "Vamos conversar"
+
+**Quando chamar:** depois que o formulário "Vamos conversar. Te chamo no
+WhatsApp em alguns minutos." é submetido com sucesso.
+
+**Por quê:** este é o **gatilho oficial de lead**. Sem isso, o lead não
+existe no CRM e o parceiro não é notificado.
+
+### Payload
+
+```json
+{
+  "source": "whatsapp_form",
+  "name": "João Silva",
+  "email": "joao@contabilxyz.com.br",
+  "phone": "(11) 99999-8888",
+  "company_name": "Contábil XYZ",
+  "message": "Quero entender como vocês resolvem cobrança de documentos"
+}
+```
+
+Campos obrigatórios: `source`, `name`, `phone`. Resto opcional.
 
 ### Resposta
 
 ```json
 {
-  "id": "uuid-do-crm-lead",
+  "id": "uuid-do-lead",
   "telegram_sent": true,
-  "created": true
+  "matched_diagnosis": true,
+  "duplicate": false
 }
 ```
 
-`created: false` significa que já existia (idempotência).
+- `matched_diagnosis: true` → CRM achou snapshot prévio com mesmo email ou
+  phone normalizado (últimos 90 dias). O snapshot é vinculado ao lead e
+  marcado como convertido. O Telegram inclui a badge 🧠.
+- `duplicate: true` → já existe lead com mesmo `(source, phone)`. Telegram
+  **não** dispara de novo.
 
-### Curl pra copiar pro repo do site
-
-```bash
-curl -X POST https://crm.levilael.com.br/api/webhooks/lead-from-site \
-  -H "content-type: application/json" \
-  -H "x-webhook-secret: $CRM_WEBHOOK_SECRET" \
-  -d '{
-    "source": "diagnosis",
-    "source_lead_id": "'"$LEAD_ID"'",
-    "name": "'"$LEAD_NAME"'",
-    "email": "'"$LEAD_EMAIL"'",
-    "phone": "'"$LEAD_PHONE"'",
-    "company_name": "'"$LEAD_COMPANY"'",
-    "diagnosis_score": '"$LEAD_SCORE"',
-    "diagnosis_answers": '"$LEAD_ANSWERS"'
-  }'
-```
-
-### TypeScript helper (cola no repo do site)
+### Snippet TypeScript
 
 ```ts
-// lib/crm-webhook.ts
+// lib/crm-webhook.ts no repo do site (continuação)
 export async function notifyCrmOfNewLead(payload: {
-  source: 'diagnosis' | 'calcom' | 'manual';
-  source_lead_id?: string;
   name: string;
-  email?: string;
-  phone?: string;
-  company_name?: string;
-  diagnosis_score?: number;
-  diagnosis_answers?: Record<string, unknown>;
+  email?: string | null;
+  phone: string;
+  company_name?: string | null;
+  message?: string | null;
 }) {
-  const res = await fetch(`${process.env.CRM_URL}/api/webhooks/lead-from-site`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-webhook-secret': process.env.CRM_WEBHOOK_SECRET!,
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    console.error('CRM webhook failed', res.status, await res.text());
-    return null;
+  try {
+    const res = await fetch(
+      `${process.env.CRM_URL}/api/webhooks/lead-from-site`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-webhook-secret': process.env.CRM_WEBHOOK_SECRET!,
+        },
+        body: JSON.stringify({
+          source: 'whatsapp_form',
+          ...payload,
+        }),
+      },
+    );
+    if (!res.ok) {
+      console.error('[crm] lead webhook failed', res.status, await res.text());
+    }
+  } catch (err) {
+    console.error('[crm] lead webhook error', err);
   }
-  return res.json() as Promise<{ id: string; telegram_sent: boolean; created: boolean }>;
 }
 ```
 
-## Telegram
+Chama assim no endpoint do formulário:
 
-CRM dispara via bot já criado. Cada usuário em `crm_users` tem `telegram_chat_id`. Pra descobrir o chat_id, mandar `/start` pro bot e ler em `/settings` (futura tela com helper).
+```ts
+// app/api/contact/route.ts (ou onde o form vai)
+import { notifyCrmOfNewLead } from '@/lib/crm-webhook';
 
-## Cal.com → CRM (TODO)
+// ... após salvar no banco do site ...
+await notifyCrmOfNewLead({
+  name: body.name,
+  email: body.email,
+  phone: body.phone,
+  company_name: body.company,
+  message: body.message,
+});
+```
 
-Ainda não implementado. Opção 1: webhook nativo do Cal.com (Settings → Webhooks → URL do CRM). Opção 2: Zapier/Make como ponte. Definir em v2.
+**Não use `await` se a resposta da rota não puder esperar.** Em produção,
+disparar com `void notifyCrmOfNewLead(...)` ou pôr em fila se for crítico.
+Como o site é serverless, await está OK (timeout do CRM é 10s).
+
+### Env vars no repo do SITE
+
+```
+CRM_URL=https://crm.levilael.com.br
+CRM_WEBHOOK_SECRET=<mesmo valor que está na env do CRM>
+```
+
+---
+
+## 4. Cal.com → CRM
+
+Cal.com tem webhook nativo. Configurar:
+
+### Passos no Cal.com
+
+1. Logar em cal.com → **Settings** → **Developer** → **Webhooks**
+2. **Create webhook**
+3. Preencher:
+   - **Subscriber URL:** `https://crm.levilael.com.br/api/webhooks/lead-from-site`
+   - **Event triggers:** marcar apenas **`BOOKING_CREATED`**
+   - **Payload template:** ativar e colar:
+
+```json
+{
+  "source": "calcom",
+  "name": "{{ATTENDEE_NAME}}",
+  "email": "{{ATTENDEE_EMAIL}}",
+  "phone": "{{ATTENDEE_PHONE_NUMBER}}",
+  "calcom_event_uri": "{{BOOKING_URL}}"
+}
+```
+
+   - **Custom headers:** adicionar
+     - Header: `x-webhook-secret`
+     - Value: `{{CRM_WEBHOOK_SECRET}}` (não dá pra ter env no Cal, então cola o valor real — rotacionar exige editar aqui)
+
+4. Save webhook
+
+### Validar
+
+Agendar um booking de teste em si mesmo. Em <30s:
+
+- Lead aparece no kanban como `source=calcom`
+- Telegram dispara
+- Se o email/phone bater com diagnóstico prévio, vem com badge de match
+
+### Limites
+
+- O `phone` do Cal.com pode vir vazio dependendo do campo do form. Se vier
+  vazio, o webhook rejeita 422 (`phone` é obrigatório). Solução: marcar
+  campo phone como required no form do Cal.com.
+
+---
+
+## 5. Rotação do `CRM_WEBHOOK_SECRET`
+
+1. Gerar novo: `openssl rand -hex 32`
+2. Atualizar no Vercel do CRM: `vercel env rm CRM_WEBHOOK_SECRET production && vercel env add CRM_WEBHOOK_SECRET production`
+3. Redeploy CRM: `vercel --prod`
+4. Atualizar no Vercel do site (mesma var) + redeploy
+5. Atualizar no Cal.com webhook (Custom headers)
+
+Janela de inconsistência: chamadas durante o redeploy retornam 401. Vale a
+pena fazer fora de horário comercial.
+
+---
+
+## 6. Cal.com → CRM (passo a passo visual)
+
+> Screenshots quando o setup for feito. Por enquanto, ver §4.
