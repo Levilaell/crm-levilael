@@ -11,6 +11,7 @@ export type LeadStage =
   | 'discovery_done'
   | 'proposal_sent'
   | 'negotiation'
+  | 'stand_by'
   | 'won'
   | 'lost';
 
@@ -23,6 +24,7 @@ export const LEAD_STAGES: readonly LeadStage[] = [
   'discovery_done',
   'proposal_sent',
   'negotiation',
+  'stand_by',
   'won',
   'lost',
 ] as const;
@@ -36,6 +38,7 @@ export const STAGE_LABELS: Record<LeadStage, string> = {
   discovery_done: 'Descoberta feita',
   proposal_sent: 'Proposta enviada',
   negotiation: 'Negociação',
+  stand_by: 'Stand by',
   won: 'Ganho',
   lost: 'Perdido',
 };
@@ -47,6 +50,7 @@ export type KanbanColumn =
   | 'triage'
   | 'discovery'
   | 'proposal'
+  | 'stand_by'
   | 'closed';
 
 export const KANBAN_COLUMNS: readonly KanbanColumn[] = [
@@ -55,6 +59,7 @@ export const KANBAN_COLUMNS: readonly KanbanColumn[] = [
   'triage',
   'discovery',
   'proposal',
+  'stand_by',
   'closed',
 ] as const;
 
@@ -64,6 +69,7 @@ export const KANBAN_COLUMN_LABELS: Record<KanbanColumn, string> = {
   triage: 'Triagem',
   discovery: 'Descoberta',
   proposal: 'Proposta',
+  stand_by: 'Stand by',
   closed: 'Fechados',
 };
 
@@ -73,6 +79,7 @@ export function stageToColumn(stage: LeadStage): KanbanColumn {
   if (stage === 'triage_scheduled' || stage === 'triage_done') return 'triage';
   if (stage === 'discovery_scheduled' || stage === 'discovery_done') return 'discovery';
   if (stage === 'proposal_sent' || stage === 'negotiation') return 'proposal';
+  if (stage === 'stand_by') return 'stand_by';
   return 'closed';
 }
 

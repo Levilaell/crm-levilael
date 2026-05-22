@@ -36,6 +36,7 @@ const COLUMN_DEFAULT_STAGE: Record<ColKey, LeadStage> = {
   triage: 'triage_scheduled',
   discovery: 'discovery_scheduled',
   proposal: 'proposal_sent',
+  stand_by: 'stand_by',
   closed: 'won',
 };
 

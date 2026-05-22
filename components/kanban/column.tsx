@@ -19,6 +19,7 @@ const COLUMN_ACCENT: Record<ColKey, string> = {
   triage: 'bg-blue-400',
   discovery: 'bg-violet-400',
   proposal: 'bg-amber-500',
+  stand_by: 'bg-slate-500',
   closed: 'bg-emerald-500',
 };
 
