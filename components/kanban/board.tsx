@@ -58,6 +58,7 @@ export function KanbanBoard({ leads: initialLeads, users }: BoardProps) {
       triage: [],
       discovery: [],
       proposal: [],
+      stand_by: [],
       closed: [],
     };
     for (const lead of leads) {
