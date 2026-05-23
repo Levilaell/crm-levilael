@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, RefreshCw, FileText, Send, Check, X } from 'lucide-react';
+import { Loader2, RefreshCw, Send, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ProposalRow, ProposalWave } from '@/lib/proposals';
 import type { ProposalStatus } from '@/types/crm';
@@ -50,7 +50,6 @@ export function ProposalCard({ leadId, proposal, hasDiscoveryBriefing }: Props) 
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const fmt = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -93,26 +92,6 @@ export function ProposalCard({ leadId, proposal, hasDiscoveryBriefing }: Props) 
       toast.error('Falha', { description: err instanceof Error ? err.message : 'Erro' });
     } finally {
       setStatusSaving(false);
-    }
-  }
-
-  async function generatePdf() {
-    setGeneratingPdf(true);
-    try {
-      const res = await fetch('/api/slides/generate', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ lead_id: leadId, kind: 'proposal' }),
-      });
-      const json = (await res.json()) as { ok: boolean; error?: string; data?: { id: string } };
-      if (!res.ok || !json.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-      toast.success('Proposta HTML gerada — abrir em nova aba');
-      if (json.data?.id) window.open(`/api/slides/${json.data.id}/view`, '_blank');
-      router.refresh();
-    } catch (err) {
-      toast.error('Falha', { description: err instanceof Error ? err.message : 'Erro' });
-    } finally {
-      setGeneratingPdf(false);
     }
   }
 
@@ -202,10 +181,6 @@ export function ProposalCard({ leadId, proposal, hasDiscoveryBriefing }: Props) 
       </Table>
 
       <div className="flex flex-wrap gap-2 pt-2 border-t">
-        <Button onClick={generatePdf} disabled={generatingPdf}>
-          {generatingPdf ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
-          Gerar HTML da proposta
-        </Button>
         {proposal.status === 'draft' || proposal.status === 'revised' ? (
           <Button variant="outline" onClick={() => setStatus('sent')} disabled={statusSaving}>
             <Send className="size-4" />

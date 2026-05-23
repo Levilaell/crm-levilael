@@ -18,6 +18,7 @@ const OPERATION_LABELS: Record<string, string> = {
   briefing_triage: 'Briefing de triagem',
   briefing_discovery: 'Briefing de descoberta',
   discovery_script: 'Script de descoberta',
+  proposal_script: 'Script de proposta',
   slides_discovery_prep: 'Slides de preparação',
   slides_proposal: 'Slides de proposta',
   whisper_transcription: 'Transcrição (Whisper)',

@@ -3,16 +3,35 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import type { LeadProgress, ProgressState } from '@/lib/lead-progress';
 
 const TABS = [
-  { key: 'overview', label: 'Visão geral' },
-  { key: 'triage', label: 'Triagem' },
-  { key: 'discovery', label: 'Descoberta' },
-  { key: 'solution', label: 'Solução' },
-  { key: 'history', label: 'Histórico' },
+  { key: 'overview', label: 'Visão geral', progressKey: null },
+  { key: 'triage', label: 'Triagem', progressKey: 'triage' },
+  { key: 'discovery', label: 'Descoberta', progressKey: 'discovery' },
+  { key: 'solution', label: 'Solução', progressKey: 'solution' },
+  { key: 'history', label: 'Histórico', progressKey: null },
 ] as const;
 
-export function LeadTabs({ leadId }: { leadId: string }) {
+const STATUS_DOT: Record<ProgressState, string> = {
+  empty: 'bg-zinc-300 dark:bg-zinc-700',
+  in_progress: 'bg-amber-500',
+  done: 'bg-emerald-500',
+};
+
+const STATUS_LABEL: Record<ProgressState, string> = {
+  empty: 'vazio',
+  in_progress: 'em progresso',
+  done: 'concluído',
+};
+
+export function LeadTabs({
+  leadId,
+  progress,
+}: {
+  leadId: string;
+  progress: LeadProgress;
+}) {
   const pathname = usePathname();
   return (
     <div className="border-b">
@@ -20,18 +39,26 @@ export function LeadTabs({ leadId }: { leadId: string }) {
         {TABS.map((tab) => {
           const href = `/lead/${leadId}/${tab.key}`;
           const active = pathname === href || pathname.startsWith(href + '/');
+          const state = tab.progressKey ? progress[tab.progressKey] : null;
           return (
             <Link
               key={tab.key}
               href={href}
+              title={state ? `${tab.label} — ${STATUS_LABEL[state]}` : undefined}
               className={cn(
-                'border-b-2 px-1 py-2.5 text-sm font-medium whitespace-nowrap transition-colors',
+                'inline-flex items-center gap-2 border-b-2 px-1 py-2.5 text-sm font-medium whitespace-nowrap transition-colors',
                 active
                   ? 'border-primary text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
               )}
             >
               {tab.label}
+              {state ? (
+                <span
+                  aria-label={STATUS_LABEL[state]}
+                  className={cn('size-2 rounded-full', STATUS_DOT[state])}
+                />
+              ) : null}
             </Link>
           );
         })}

@@ -1,21 +1,52 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { requireCrmSession } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/service';
-import { generateText, ANTHROPIC_MODEL } from '@/lib/anthropic';
+import { generateStructured, ANTHROPIC_MODEL } from '@/lib/anthropic';
 import { logAIOperation } from '@/lib/ai-log';
-import { SLIDES_SYSTEM, buildSlidesUserPrompt } from '@/lib/prompts/slides';
 import { getLatestBriefing } from '@/lib/briefings';
+import {
+  DISCOVERY_PREP_SYSTEM,
+  DISCOVERY_PREP_TOOL_NAME,
+  DISCOVERY_PREP_TOOL_DESCRIPTION,
+  DISCOVERY_PREP_INPUT_SCHEMA,
+  DiscoveryPrepDataSchema,
+  buildDiscoveryPrepUserPrompt,
+  type DiscoveryPrepData,
+} from '@/lib/prompts/discovery-prep-pptx';
+import { renderDiscoveryPrepPptx } from '@/lib/pptx/discovery-prep-template';
+import {
+  PROPOSAL_PPTX_SYSTEM,
+  PROPOSAL_PPTX_TOOL_NAME,
+  PROPOSAL_PPTX_TOOL_DESCRIPTION,
+  PROPOSAL_PPTX_INPUT_SCHEMA,
+  ProposalPptxDataSchema,
+  buildProposalPptxUserPrompt,
+  type ProposalPptxData,
+} from '@/lib/prompts/proposal-pptx';
+import { renderProposalPptx } from '@/lib/pptx/proposal-template';
 
 const BodySchema = z.object({
   lead_id: z.string().uuid(),
   kind: z.enum(['discovery_prep', 'proposal']),
 });
 
+const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+
 export const maxDuration = 300;
+
+type TriageContent = { perfil_decisor?: { nome?: string | null } };
+
+function resolveMesAno(): string {
+  const raw = format(new Date(), "MMMM 'de' yyyy", { locale: ptBR });
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
 
 export async function POST(request: Request) {
   const session = await requireCrmSession();
+
   let raw: unknown;
   try {
     raw = await request.json();
@@ -23,7 +54,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'invalid json' }, { status: 400 });
   }
   const parsed = BodySchema.safeParse(raw);
-  if (!parsed.success) return NextResponse.json({ ok: false, error: 'invalid body' }, { status: 422 });
+  if (!parsed.success) {
+    return NextResponse.json({ ok: false, error: 'invalid body' }, { status: 422 });
+  }
 
   const admin = createServiceRoleClient();
   const { data: lead } = await admin
@@ -31,40 +64,104 @@ export async function POST(request: Request) {
     .select('id, name, company_name')
     .eq('id', parsed.data.lead_id)
     .maybeSingle();
-  if (!lead) return NextResponse.json({ ok: false, error: 'lead not found' }, { status: 404 });
+  if (!lead) {
+    return NextResponse.json({ ok: false, error: 'lead not found' }, { status: 404 });
+  }
   const leadRow = lead as { id: string; name: string; company_name: string | null };
 
-  // discovery_prep usa briefing de triagem (não tem discovery ainda)
-  // proposal usa briefing de discovery
-  const briefingKind = parsed.data.kind === 'discovery_prep' ? 'triage' : 'discovery';
-  const briefing = await getLatestBriefing(leadRow.id, briefingKind);
-  if (!briefing) {
-    return NextResponse.json(
-      { ok: false, error: `briefing de ${briefingKind} ainda não foi gerado` },
-      { status: 412 },
-    );
-  }
+  const companyName = leadRow.company_name?.trim() || leadRow.name;
+  const mesAno = resolveMesAno();
 
-  const slidesOperation = parsed.data.kind === 'proposal' ? 'slides_proposal' : 'slides_discovery_prep';
-  let result;
+  let pptxBuffer: Buffer;
+  let sourceBriefingId: string;
+  let operation: 'slides_discovery_prep' | 'slides_proposal';
+  let model = ANTHROPIC_MODEL;
+  let promptTokens = 0;
+  let completionTokens = 0;
   const startedAt = Date.now();
+
   try {
-    result = await generateText({
-      system: SLIDES_SYSTEM,
-      user: buildSlidesUserPrompt({
-        leadName: leadRow.name,
-        companyName: leadRow.company_name,
-        discoveryBriefing: briefing.content_json,
-        kind: parsed.data.kind,
-      }),
-      maxTokens: 8192,
-    });
+    if (parsed.data.kind === 'discovery_prep') {
+      operation = 'slides_discovery_prep';
+      const triage = await getLatestBriefing(leadRow.id, 'triage');
+      if (!triage) {
+        return NextResponse.json(
+          { ok: false, error: 'briefing de triagem ainda não foi gerado' },
+          { status: 412 },
+        );
+      }
+      const triageContent = triage.content_json as unknown as TriageContent;
+      const contato = triageContent?.perfil_decisor?.nome?.trim() || leadRow.name;
+
+      const result = await generateStructured<DiscoveryPrepData>({
+        system: DISCOVERY_PREP_SYSTEM,
+        user: buildDiscoveryPrepUserPrompt({
+          leadName: leadRow.name,
+          companyName,
+          contato,
+          mesAno,
+          triageBriefing: triage.content_json,
+        }),
+        toolName: DISCOVERY_PREP_TOOL_NAME,
+        toolDescription: DISCOVERY_PREP_TOOL_DESCRIPTION,
+        inputSchema: DISCOVERY_PREP_INPUT_SCHEMA as unknown as Record<string, unknown>,
+        maxTokens: 8192,
+        validate: (input) => DiscoveryPrepDataSchema.parse(input),
+      });
+      model = result.model;
+      promptTokens = result.promptTokens;
+      completionTokens = result.completionTokens;
+      pptxBuffer = await renderDiscoveryPrepPptx(result.data);
+      sourceBriefingId = triage.id;
+    } else {
+      operation = 'slides_proposal';
+      const [discovery, triage] = await Promise.all([
+        getLatestBriefing(leadRow.id, 'discovery'),
+        getLatestBriefing(leadRow.id, 'triage'),
+      ]);
+      if (!discovery) {
+        return NextResponse.json(
+          { ok: false, error: 'briefing de descoberta ainda não foi gerado' },
+          { status: 412 },
+        );
+      }
+      if (!triage) {
+        return NextResponse.json(
+          { ok: false, error: 'briefing de triagem ainda não foi gerado' },
+          { status: 412 },
+        );
+      }
+      const triageContent = triage.content_json as unknown as TriageContent;
+      const contato = triageContent?.perfil_decisor?.nome?.trim() || leadRow.name;
+
+      const result = await generateStructured<ProposalPptxData>({
+        system: PROPOSAL_PPTX_SYSTEM,
+        user: buildProposalPptxUserPrompt({
+          leadName: leadRow.name,
+          companyName,
+          contato,
+          mesAno,
+          triageBriefing: triage.content_json,
+          discoveryBriefing: discovery.content_json,
+        }),
+        toolName: PROPOSAL_PPTX_TOOL_NAME,
+        toolDescription: PROPOSAL_PPTX_TOOL_DESCRIPTION,
+        inputSchema: PROPOSAL_PPTX_INPUT_SCHEMA as unknown as Record<string, unknown>,
+        maxTokens: 8192,
+        validate: (input) => ProposalPptxDataSchema.parse(input),
+      });
+      model = result.model;
+      promptTokens = result.promptTokens;
+      completionTokens = result.completionTokens;
+      pptxBuffer = await renderProposalPptx(result.data);
+      sourceBriefingId = discovery.id;
+    }
   } catch (err) {
     await logAIOperation({
       leadId: leadRow.id,
-      operation: slidesOperation,
+      operation: parsed.data.kind === 'discovery_prep' ? 'slides_discovery_prep' : 'slides_proposal',
       provider: 'anthropic',
-      model: ANTHROPIC_MODEL,
+      model,
       durationMs: Date.now() - startedAt,
       success: false,
       errorMessage: err instanceof Error ? err.message : 'unknown',
@@ -76,54 +173,55 @@ export async function POST(request: Request) {
   }
   const durationMs = Date.now() - startedAt;
 
-  const html = result.text.trim();
-
-  // Salvar HTML no storage pra ter URL pública (signed)
-  const path = `${leadRow.id}/${parsed.data.kind}_${Date.now()}.html`;
-  await admin.storage.from('crm_pdfs').upload(path, new Blob([html], { type: 'text/html' }), {
-    contentType: 'text/html',
-    upsert: false,
-  });
+  const path = `${leadRow.id}/${parsed.data.kind}_${Date.now()}.pptx`;
+  const { error: uploadErr } = await admin.storage
+    .from('crm_slides')
+    .upload(path, new Blob([new Uint8Array(pptxBuffer)], { type: PPTX_MIME }), {
+      contentType: PPTX_MIME,
+      upsert: false,
+    });
+  if (uploadErr) {
+    return NextResponse.json(
+      { ok: false, error: `upload falhou: ${uploadErr.message}` },
+      { status: 500 },
+    );
+  }
 
   const { data: inserted, error: insertErr } = await admin
     .from('crm_slide_decks')
     .insert({
       lead_id: leadRow.id,
-      briefing_id: briefing.id,
+      briefing_id: sourceBriefingId,
       kind: parsed.data.kind,
-      html_content: html,
+      pptx_storage_path: path,
     })
     .select('id')
     .single();
-
   if (insertErr || !inserted) {
-    return NextResponse.json({ ok: false, error: insertErr?.message ?? 'insert failed' }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: insertErr?.message ?? 'insert failed' },
+      { status: 500 },
+    );
   }
+  const deckId = (inserted as { id: string }).id;
 
   await admin.from('crm_lead_events').insert({
     lead_id: leadRow.id,
     actor_id: session.crmUser.id,
     event_type: 'slides_generated',
-    payload: {
-      slide_deck_id: (inserted as { id: string }).id,
-      kind: parsed.data.kind,
-      storage_path: path,
-    },
+    payload: { slide_deck_id: deckId, kind: parsed.data.kind, storage_path: path },
   });
 
   await logAIOperation({
     leadId: leadRow.id,
-    operation: slidesOperation,
+    operation,
     provider: 'anthropic',
-    model: result.model,
-    promptTokens: result.promptTokens,
-    completionTokens: result.completionTokens,
+    model,
+    promptTokens,
+    completionTokens,
     durationMs,
     success: true,
   });
 
-  return NextResponse.json({
-    ok: true,
-    data: { id: (inserted as { id: string }).id, storage_path: path },
-  });
+  return NextResponse.json({ ok: true, data: { id: deckId, storage_path: path } });
 }

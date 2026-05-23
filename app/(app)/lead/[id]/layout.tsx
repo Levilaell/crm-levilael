@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getLead, listCrmUsers } from '@/lib/leads';
+import { getLeadProgress } from '@/lib/lead-progress';
 import { LeadHeader } from '@/components/lead/lead-header';
 import { LeadTabs } from '@/components/lead/lead-tabs';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,11 @@ interface LeadLayoutProps {
 export default async function LeadLayout({ children, params }: LeadLayoutProps) {
   await requireCrmSession();
   const { id } = await params;
-  const [lead, users] = await Promise.all([getLead(id), listCrmUsers()]);
+  const [lead, users, progress] = await Promise.all([
+    getLead(id),
+    listCrmUsers(),
+    getLeadProgress(id),
+  ]);
   if (!lead) notFound();
 
   return (
@@ -33,7 +38,7 @@ export default async function LeadLayout({ children, params }: LeadLayoutProps) 
         />
       </div>
       <LeadHeader lead={lead} users={users} />
-      <LeadTabs leadId={lead.id} />
+      <LeadTabs leadId={lead.id} progress={progress} />
       <div className="flex-1 min-h-0">{children}</div>
     </div>
   );

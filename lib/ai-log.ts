@@ -19,6 +19,7 @@ export type AIOperation =
   | 'briefing_triage'
   | 'briefing_discovery'
   | 'discovery_script'
+  | 'proposal_script'
   | 'slides_discovery_prep'
   | 'slides_proposal'
   | 'whisper_transcription';

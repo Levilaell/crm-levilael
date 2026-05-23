@@ -5,8 +5,7 @@ export interface SlideDeckRow {
   lead_id: string;
   kind: 'discovery_prep' | 'proposal';
   briefing_id: string | null;
-  html_content: string;
-  pdf_storage_path: string | null;
+  pptx_storage_path: string | null;
   created_at: string;
 }
 
@@ -17,7 +16,7 @@ export async function listSlideDecks(
   const admin = createServiceRoleClient();
   let q = admin
     .from('crm_slide_decks')
-    .select('id, lead_id, kind, briefing_id, html_content, pdf_storage_path, created_at')
+    .select('id, lead_id, kind, briefing_id, pptx_storage_path, created_at')
     .eq('lead_id', leadId)
     .order('created_at', { ascending: false });
   if (kind) q = q.eq('kind', kind);
