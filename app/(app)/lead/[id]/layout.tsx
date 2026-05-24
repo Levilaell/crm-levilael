@@ -25,20 +25,21 @@ export default async function LeadLayout({ children, params }: LeadLayoutProps) 
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
-      <div className="flex items-center gap-2 -ml-2">
+      <div className="sticky top-14 z-20 -mx-4 md:-mx-6 px-4 md:px-6 pt-2 pb-3 bg-background/80 backdrop-blur-md border-b border-border/60 space-y-2">
         <Button
           variant="ghost"
-          size="sm"
+          size="xs"
+          className="-ml-2"
           render={
             <Link href="/">
-              <ArrowLeft className="size-4" />
+              <ArrowLeft className="size-3" />
               Voltar
             </Link>
           }
         />
+        <LeadHeader lead={lead} users={users} />
+        <LeadTabs leadId={lead.id} progress={progress} />
       </div>
-      <LeadHeader lead={lead} users={users} />
-      <LeadTabs leadId={lead.id} progress={progress} />
       <div className="flex-1 min-h-0">{children}</div>
     </div>
   );

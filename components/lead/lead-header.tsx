@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, Phone, Mail } from 'lucide-react';
+import { Building2, Phone, Mail, BadgeDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
@@ -26,6 +26,11 @@ import type { LeadRow } from '@/lib/leads';
 interface LeadHeaderProps {
   lead: LeadRow;
   users: Array<{ id: string; display_name: string }>;
+}
+
+function fmtTicketK(n: number): string {
+  if (n >= 1000) return `${Math.round(n / 1000)}k`;
+  return String(n);
 }
 
 export function LeadHeader({ lead, users }: LeadHeaderProps) {
@@ -69,6 +74,15 @@ export function LeadHeader({ lead, users }: LeadHeaderProps) {
           {typeof lead.diagnosis_score === 'number' ? (
             <Badge variant="outline" className="text-xs">
               score {lead.diagnosis_score}
+            </Badge>
+          ) : null}
+          {lead.estimated_ticket_min && lead.estimated_ticket_max ? (
+            <Badge
+              variant="outline"
+              className="text-xs font-semibold tabular-nums border-brand/40 text-brand"
+            >
+              <BadgeDollarSign className="size-3" />
+              R$ {fmtTicketK(lead.estimated_ticket_min)}–{fmtTicketK(lead.estimated_ticket_max)}
             </Badge>
           ) : null}
         </div>

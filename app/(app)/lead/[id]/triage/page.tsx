@@ -23,18 +23,8 @@ export default async function TriagePage({
   ]);
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Transcrição da call de triagem</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <TranscriptionUploader leadId={id} kind="triage_call" />
-          <TranscriptionList leadId={id} transcriptions={transcriptions} />
-        </CardContent>
-      </Card>
-
-      <Card>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <Card className="lg:col-span-2">
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle>Briefing</CardTitle>
@@ -54,6 +44,16 @@ export default async function TriagePage({
           ) : (
             <BriefingVersionSelector briefings={briefings} kind="triage" />
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="self-start">
+        <CardHeader>
+          <CardTitle>Transcrição da call</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <TranscriptionUploader leadId={id} kind="triage_call" />
+          <TranscriptionList leadId={id} transcriptions={transcriptions} />
         </CardContent>
       </Card>
     </div>

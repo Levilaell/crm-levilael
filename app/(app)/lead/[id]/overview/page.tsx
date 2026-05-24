@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLead } from '@/lib/leads';
 import { getSnapshot } from '@/lib/diagnosis-snapshots';
@@ -6,6 +7,7 @@ import { LeadOverviewForm } from '@/components/lead/lead-overview-form';
 import { DiagnosisSnapshotCard } from '@/components/diagnosis/diagnosis-snapshot-card';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ArrowRight } from 'lucide-react';
 
 export default async function LeadOverviewPage({
   params,
@@ -42,7 +44,7 @@ export default async function LeadOverviewPage({
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Métricas</CardTitle>
+            <CardTitle>Status &amp; Timeline</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Metric
@@ -56,28 +58,24 @@ export default async function LeadOverviewPage({
                 addSuffix: true,
               })}
             />
-            <Metric
-              label="Último contato"
-              value={
-                lead.last_contact_at
-                  ? formatDistanceToNow(new Date(lead.last_contact_at), {
-                      locale: ptBR,
-                      addSuffix: true,
-                    })
-                  : 'nunca'
-              }
-            />
-            <Metric
-              label="Próxima ação"
-              value={
-                lead.next_action_at
-                  ? format(new Date(lead.next_action_at), "dd 'de' MMM, HH:mm", { locale: ptBR })
-                  : '—'
-              }
-            />
+            {lead.next_action_at ? (
+              <Metric
+                label="Próxima ação"
+                value={format(new Date(lead.next_action_at), "dd 'de' MMM, HH:mm", {
+                  locale: ptBR,
+                })}
+              />
+            ) : null}
             {lead.lost_reason ? (
               <Metric label="Motivo perdido" value={lead.lost_reason} />
             ) : null}
+            <Link
+              href={`/lead/${id}/history`}
+              className="flex items-center gap-1 text-xs text-brand hover:underline pt-2 border-t border-border/60 mt-3"
+            >
+              Ver histórico completo
+              <ArrowRight className="size-3" />
+            </Link>
           </CardContent>
         </Card>
       </div>

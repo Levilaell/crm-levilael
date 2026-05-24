@@ -31,46 +31,8 @@ export default async function DiscoveryPage({
   const hasTriage = triageBriefings.length > 0;
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Script de descoberta</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DiscoveryScriptCard
-            leadId={id}
-            scripts={scripts}
-            hasTriageBriefing={hasTriage}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Slides de preparação</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SlideDeckCard
-            leadId={id}
-            kind="discovery_prep"
-            decks={slideDecks}
-            prerequisiteMet={hasTriage}
-            prerequisiteMessage="Gere o briefing de triagem primeiro."
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Transcrição da call de descoberta</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <TranscriptionUploader leadId={id} kind="discovery_call" />
-          <TranscriptionList leadId={id} transcriptions={transcriptions} />
-        </CardContent>
-      </Card>
-
-      <Card>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <Card className="lg:col-span-2">
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle>Briefing final</CardTitle>
@@ -92,6 +54,56 @@ export default async function DiscoveryPage({
           )}
         </CardContent>
       </Card>
+
+      <div className="space-y-5 self-start">
+        <section className="space-y-3">
+          <h2 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
+            Preparação da call
+          </h2>
+          <Card>
+            <CardHeader>
+              <CardTitle>Script de descoberta</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DiscoveryScriptCard
+                leadId={id}
+                scripts={scripts}
+                hasTriageBriefing={hasTriage}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Slides de preparação</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SlideDeckCard
+                leadId={id}
+                kind="discovery_prep"
+                decks={slideDecks}
+                prerequisiteMet={hasTriage}
+                prerequisiteMessage="Gere o briefing de triagem primeiro."
+              />
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
+            Call gravada
+          </h2>
+          <Card>
+            <CardHeader>
+              <CardTitle>Transcrição</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <TranscriptionUploader leadId={id} kind="discovery_call" />
+              <TranscriptionList leadId={id} transcriptions={transcriptions} />
+            </CardContent>
+          </Card>
+        </section>
+      </div>
     </div>
   );
 }

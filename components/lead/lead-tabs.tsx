@@ -34,35 +34,33 @@ export function LeadTabs({
 }) {
   const pathname = usePathname();
   return (
-    <div className="border-b">
-      <nav className="-mb-px flex gap-4 overflow-x-auto" aria-label="Tabs">
-        {TABS.map((tab) => {
-          const href = `/lead/${leadId}/${tab.key}`;
-          const active = pathname === href || pathname.startsWith(href + '/');
-          const state = tab.progressKey ? progress[tab.progressKey] : null;
-          return (
-            <Link
-              key={tab.key}
-              href={href}
-              title={state ? `${tab.label} — ${STATUS_LABEL[state]}` : undefined}
-              className={cn(
-                'inline-flex items-center gap-2 border-b-2 px-1 py-2.5 text-sm font-medium whitespace-nowrap transition-colors',
-                active
-                  ? 'border-primary text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-              )}
-            >
-              {tab.label}
-              {state ? (
-                <span
-                  aria-label={STATUS_LABEL[state]}
-                  className={cn('size-2 rounded-full', STATUS_DOT[state])}
-                />
-              ) : null}
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+    <nav className="-mb-3 flex gap-4 overflow-x-auto" aria-label="Tabs">
+      {TABS.map((tab) => {
+        const href = `/lead/${leadId}/${tab.key}`;
+        const active = pathname === href || pathname.startsWith(href + '/');
+        const state = tab.progressKey ? progress[tab.progressKey] : null;
+        return (
+          <Link
+            key={tab.key}
+            href={href}
+            title={state ? `${tab.label} — ${STATUS_LABEL[state]}` : undefined}
+            className={cn(
+              'inline-flex items-center gap-2 border-b-2 px-1 pt-1 pb-2 text-sm font-medium whitespace-nowrap transition-colors',
+              active
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+            )}
+          >
+            {tab.label}
+            {state ? (
+              <span
+                aria-label={STATUS_LABEL[state]}
+                className={cn('size-2 rounded-full', STATUS_DOT[state])}
+              />
+            ) : null}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
