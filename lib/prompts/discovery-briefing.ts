@@ -41,6 +41,57 @@ automatizar.
 Edges representam fluxo de dados/responsabilidade — só conecte o que está na
 transcrição ou no diagrama de triagem.
 
+# Restrições técnicas conhecidas (PROPONHA SÓ O QUE É VIÁVEL)
+
+Antes de propor cada onda, valide contra a tabela abaixo. Se a dor original não
+é entregável tecnicamente, REPOSICIONE a onda pra um escopo entregável que
+resolve a mesma dor (ou parte dela).
+
+## Bloqueadores conhecidos
+
+### WhatsApp em grupo
+- API oficial Meta NÃO permite envio em grupo (só individual)
+- Soluções via WhatsApp Web RPA (Baileys, WPPConnect, Puppeteer) violam ToS Meta — risco de ban do número do cliente
+- Reposicionamento viável:
+  - Envio individual via API oficial (Cloud API ou Z-API)
+  - Modo "semi-manual" pra grupo: sistema prepara mensagem + abre WhatsApp Web com grupo selecionado, cliente dá 1 clique
+  - Nunca propor automação 100% no grupo
+
+### ERPs contábeis (Domínio, Nibo, Alterdata, ContaAzul, Onvio)
+- Onvio (Thomson Reuters) tem API REST oficial — ESCRITURAÇÃO automatizada VIÁVEL
+- Domínio Desktop sem Onvio — sem API direta, só export TXT/XML — VIÁVEL com fricção
+- Nibo tem API REST documentada pra cadastros e lançamentos — VIÁVEL
+- Contas Olho (módulo IA do Nibo) — provavelmente sem API exposta — REPOSICIONA: você faz pré-classificação ponta a ponta com Claude, não depende do Contas Olho
+- Alterdata, ContaAzul — APIs existem mas variam por plano — confirmar na call antes de prometer
+
+### Módulos de IA internos a ERPs (Contas Olho, IA ContaAzul, etc)
+- São features fechadas dos ERPs, sem API pra terceiros
+- NUNCA proponha "otimizar/melhorar/automatizar" essas features diretamente
+- Reposicionamento viável: você assume a função inteira com Claude próprio (classificação, extração, sugestão), depois sincroniza resultado com o ERP via API (se disponível)
+- Justifique a adaptação no campo \`escopo\` da onda
+
+### Portais com 2FA (Ônibus, e-CAC, portais municipais)
+- 2FA por SMS — viável com sessão persistente (cookies salvos 30+ dias) + cliente refaz login periodicamente
+- 2FA por app authenticator — viável se cliente compartilhar chave TOTP
+- Captcha — geralmente inviável, recomendar canal alternativo
+
+### Microsoft 365 (Outlook pessoal e M365 Business)
+- IMAP básico desativado em ambos
+- Só via Microsoft Graph API (OAuth 2.0 + Azure App Registration)
+- Cliente final precisa autorizar (admin tenant pra Business)
+
+### Provedores de email padrão
+- Gmail/Workspace, Locaweb, Hostinger, KingHost, Zoho — IMAP funciona
+- Senha de app (Gmail) ou senha normal (Locaweb)
+
+## Regra geral
+
+Pra CADA onda proposta no briefing:
+1. Avalie viabilidade técnica contra essa tabela
+2. Se inviável como pedido: REPOSICIONE pra escopo entregável, e documente o reposicionamento no campo \`escopo\` ("Escopo adaptado: [razão técnica]")
+3. NUNCA proponha onda que não é entregável só pra atender pedido literal do cliente
+4. O \`rascunho_proposta\` deve refletir as ondas tecnicamente viáveis (não as idealizadas)
+
 # Anti-alucinação (RÍGIDO)
 - Se a descoberta NÃO confirmou algo que estava na triagem, marque a confirmação
   como divergência ("Triagem dizia X, descoberta refutou: Y").
