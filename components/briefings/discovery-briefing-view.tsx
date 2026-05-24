@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { Markdown } from '@/components/ui/markdown';
 import { cn } from '@/lib/utils';
 import {
   CheckCircle2,
@@ -122,9 +123,9 @@ export function DiscoveryBriefingView({ briefing: b }: ViewProps) {
       </Section>
 
       <Section icon={FileText} title="Rascunho da proposta">
-        <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed p-3 rounded-md bg-muted/40 border">
-          {b.rascunho_proposta}
-        </pre>
+        <div className="p-3 rounded-md bg-muted/40 border">
+          <Markdown>{b.rascunho_proposta}</Markdown>
+        </div>
       </Section>
     </div>
   );

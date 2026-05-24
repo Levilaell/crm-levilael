@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Markdown } from '@/components/ui/markdown';
 import { Copy, Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import type { BriefingRow } from '@/lib/briefings';
@@ -83,9 +84,9 @@ export function DiscoveryScriptCard({ leadId, scripts, hasTriageBriefing }: Prop
       ) : !latest ? (
         <p className="text-sm text-muted-foreground">Sem script ainda.</p>
       ) : (
-        <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed p-4 rounded-md bg-muted/40 border max-h-[400px] overflow-y-auto">
-          {latest.content_markdown}
-        </pre>
+        <div className="p-4 rounded-md bg-muted/40 border max-h-[400px] overflow-y-auto">
+          <Markdown>{latest.content_markdown ?? ''}</Markdown>
+        </div>
       )}
     </div>
   );
